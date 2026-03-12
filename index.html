@@ -93,7 +93,8 @@ header{background:var(--surface);border-bottom:1px solid var(--border);padding:0
 .rc{font-size:12px;color:var(--muted);align-self:center;white-space:nowrap;margin-left:auto}
 
 /* TABLE */
-#tw{padding:0 24px 32px;overflow-x:auto}
+#tw{padding:0 24px 32px}
+.tw-scroll{overflow-x:auto}
 table{width:100%;border-collapse:separate;border-spacing:0;background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:var(--sh)}
 th:first-child{border-top-left-radius:9px}th:last-child{border-top-right-radius:9px}
 tr:last-child td:first-child{border-bottom-left-radius:9px}tr:last-child td:last-child{border-bottom-right-radius:9px}
@@ -277,6 +278,7 @@ tr.una:hover td{background:#fffbeb}
 
 <!-- TABLE -->
 <div id="tw">
+<div class="tw-scroll">
   <div id="loading"><div class="spin"></div>Loading student data&hellip;</div>
   <table id="tbl" style="display:none">
     <thead><tr>
@@ -293,6 +295,7 @@ tr.una:hover td{background:#fffbeb}
     <h3>No students match your filters</h3>
     <p>Try adjusting your search or clearing a filter.</p>
   </div>
+</div>
 </div>
 <div id="toast"></div>
 
