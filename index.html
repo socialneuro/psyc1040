@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PSYC1040 Workshop Manager</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f0f2f5;--surface:#fff;--border:#e2e5ea;--text:#1a1d23;
+  --muted:#6b7280;--accent:#4361ee;--acl:#eef0fd;
+  --tue:#2563eb;--tue-bg:#eff6ff;
+  --t12:#059669;--t12-bg:#ecfdf5;
+  --t2:#7c3aed;--t2-bg:#f5f3ff;
+  --warn:#d97706;--warn-bg:#fffbeb;
+  --err:#dc2626;--ok:#16a34a;
+  --r:8px;--sh:0 1px 3px rgba(0,0,0,.08),0 1px 2px rgba(0,0,0,.06)
+}
+body{font-family:"Inter",sans-serif;background:var(--bg);color:var(--text);font-size:14px;min-height:100vh}
+
+/* USER OVERLAY */
+#user-overlay{position:fixed;inset:0;background:rgba(15,20,30,.78);z-index:999;display:flex;align-items:center;justify-content:center;padding:24px}
+#user-overlay.hidden{display:none}
+.uc{background:var(--surface);border-radius:16px;padding:36px;max-width:400px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.28);text-align:center}
+.uc h2{font-size:20px;font-weight:700;margin-bottom:6px}
+.uc p{color:var(--muted);font-size:13px;margin-bottom:24px}
+.ug{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.ub{padding:14px 10px;border-radius:var(--r);border:2px solid var(--border);cursor:pointer;font-weight:600;font-size:14px;background:var(--surface);transition:all .15s;font-family:"Inter",sans-serif}
+.ub:hover{border-color:var(--accent);background:var(--acl);color:var(--accent)}
+.ub.coord{grid-column:1/-1;background:var(--acl);border-color:var(--accent);color:var(--accent)}
+
+/* HEADER */
+header{background:var(--surface);border-bottom:1px solid var(--border);padding:0 24px;display:flex;align-items:center;justify-content:space-between;height:60px;position:sticky;top:0;z-index:100;box-shadow:0 1px 0 var(--border)}
+.hl{display:flex;align-items:center;gap:14px}
+.hlogo{width:36px;height:36px;background:var(--accent);border-radius:10px;display:flex;align-items:center;justify-content:center}
+.hlogo svg{width:20px;height:20px}
+.htitle{font-weight:700;font-size:16px}
+.hsub{font-size:12px;color:var(--muted);margin-top:1px}
+.hr{display:flex;align-items:center;gap:12px}
+.sync{display:flex;align-items:center;gap:6px;padding:5px 11px;border-radius:20px;font-size:12px;font-weight:500;background:var(--bg);border:1px solid var(--border);color:var(--muted)}
+.sync .dot{width:7px;height:7px;border-radius:50%;background:var(--muted);flex-shrink:0}
+.sync.saved .dot{background:var(--ok)} .sync.saved{color:var(--ok);border-color:#bbf7d0;background:#f0fdf4}
+.sync.saving .dot{background:var(--warn);animation:pulse 1s infinite} .sync.saving{color:var(--warn);border-color:#fde68a;background:#fffbeb}
+.sync.error .dot{background:var(--err)} .sync.error{color:var(--err);border-color:#fecaca;background:#fef2f2}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.uchip{display:flex;align-items:center;gap:7px;padding:5px 11px 5px 8px;border-radius:20px;background:var(--acl);border:1px solid #c7d2fe;font-size:12px;font-weight:600;color:var(--accent);cursor:pointer;transition:all .15s}
+.uchip:hover{background:#e0e7ff}
+.uav{width:22px;height:22px;border-radius:50%;background:var(--accent);color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center}
+
+/* STATS */
+#stats{display:flex;gap:12px;padding:16px 24px;flex-wrap:wrap}
+.sc2{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:12px 18px;display:flex;align-items:center;gap:10px;box-shadow:var(--sh)}
+.si2{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center}
+.sv{font-size:20px;font-weight:700;line-height:1}
+.sl{font-size:11px;color:var(--muted);margin-top:2px;font-weight:500;text-transform:uppercase;letter-spacing:.04em}
+.s-tot .si2{background:#eff6ff} .s-una .si2{background:var(--warn-bg)}
+.s-tue .si2{background:var(--tue-bg)} .s-t12 .si2{background:var(--t12-bg)} .s-t2 .si2{background:var(--t2-bg)}
+
+/* CONTROLS */
+#controls{display:flex;gap:10px;padding:0 24px 16px;flex-wrap:wrap;align-items:center}
+.sw{position:relative;flex:1;min-width:220px}
+.sw svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);width:16px;height:16px;pointer-events:none}
+.si3{width:100%;padding:8px 12px 8px 34px;border:1.5px solid var(--border);border-radius:var(--r);font-size:13px;font-family:"Inter",sans-serif;background:var(--surface);outline:none;transition:border-color .15s}
+.si3:focus{border-color:var(--accent)}
+.fs{padding:8px 30px 8px 10px;border:1.5px solid var(--border);border-radius:var(--r);font-size:13px;font-family:"Inter",sans-serif;background:var(--surface);outline:none;cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center;transition:border-color .15s}
+.fs:focus{border-color:var(--accent)}
+.rc{font-size:12px;color:var(--muted);align-self:center;white-space:nowrap;margin-left:auto}
+
+/* TABLE */
+#tw{padding:0 24px 32px;overflow-x:auto}
+table{width:100%;border-collapse:separate;border-spacing:0;background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;box-shadow:var(--sh)}
+thead{background:#f8f9fc}
+th{padding:11px 14px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);border-bottom:1px solid var(--border);white-space:nowrap;cursor:pointer;user-select:none;position:sticky;top:60px;z-index:10;background:#f8f9fc}
+th:hover{color:var(--accent)}
+th.sorted{color:var(--accent)}
+td{padding:10px 14px;border-bottom:1px solid #f0f2f5;vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#fafbff}
+tr.una td{background:#fffef5}
+tr.una:hover td{background:#fffbeb}
+.cid{width:110px;font-family:monospace;font-size:12px;color:var(--muted)}
+.cname{font-weight:500}
+.cws{width:145px} .ctbl{width:85px} .ctut{width:175px}
+.ws-b{display:inline-block;padding:3px 9px;border-radius:12px;font-size:12px;font-weight:600;white-space:nowrap}
+.ws-tue{background:var(--tue-bg);color:var(--tue)}
+.ws-t12{background:var(--t12-bg);color:var(--t12)}
+.ws-t2{background:var(--t2-bg);color:var(--t2)}
+.tb{display:inline-flex;align-items:center;gap:6px;padding:3px 9px 3px 6px;border-radius:12px;font-size:12px;font-weight:600;white-space:nowrap}
+.td{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.tc .td{background:#e63946} .tc{background:#fff1f2;color:#be123c}
+.th .td{background:#2563eb} .th{background:#eff6ff;color:#1e40af}
+.tr .td{background:#16a34a} .tr{background:#f0fdf4;color:#15803d}
+.tsa .td{background:#ca8a04} .tsa{background:#fefce8;color:#a16207}
+.tsu .td{background:#ea580c} .tsu{background:#fff7ed;color:#c2410c}
+.tsr .td{background:#7c3aed} .tsr{background:#f5f3ff;color:#6d28d9}
+.tsh .td{background:#64748b} .tsh{background:#f1f5f9;color:#475569}
+.tn{background:var(--warn-bg);color:var(--warn);font-style:italic;padding:3px 9px;border-radius:12px;font-size:12px;font-weight:600}
+.cs{width:100%;padding:5px 26px 5px 7px;border:1.5px solid transparent;border-radius:6px;font-size:13px;font-family:"Inter",sans-serif;background:transparent;cursor:pointer;appearance:none;outline:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='11' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 6px center;transition:all .15s}
+.cs:hover,.cs:focus{border-color:var(--accent);background-color:var(--acl)}
+@keyframes flash{0%{background:#bbf7d0}100%{background:transparent}}
+.flash{animation:flash .7s ease}
+.empty{padding:48px;text-align:center;color:var(--muted)}
+.empty svg{width:48px;height:48px;margin-bottom:12px;display:block;margin:0 auto 12px}
+.empty h3{font-size:15px;font-weight:600;margin-bottom:4px}
+#loading{padding:48px;text-align:center;color:var(--muted)}
+.spin{width:32px;height:32px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 12px}
+@keyframes spin{to{transform:rotate(360deg)}}
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:#1e1e2e;color:#cdd6f4;padding:10px 20px;border-radius:8px;font-size:13px;font-weight:500;transition:transform .3s ease;z-index:2000;box-shadow:0 4px 20px rgba(0,0,0,.3);white-space:nowrap}
+#toast.show{transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+
+
+</div>
+</div>
+
+<!-- USER OVERLAY -->
+<div id="user-overlay" class="hidden">
+<div class="uc">
+  <h2>Who are you?</h2>
+  <p>Your name will be shown when you make changes.<br>Stored in this browser only &mdash; you'll only need to do this once.</p>
+  <div class="ug">
+    <button class="ub coord" onclick="setUser('Eric')">Eric (Coordinator)</button>
+    <button class="ub" onclick="setUser('Carly')">Carly</button>
+    <button class="ub" onclick="setUser('Henrik')">Henrik</button>
+    <button class="ub" onclick="setUser('Raveen')">Raveen</button>
+    <button class="ub" onclick="setUser('Samantha')">Samantha</button>
+    <button class="ub" onclick="setUser('Samuel')">Samuel</button>
+    <button class="ub" onclick="setUser('Sarah')">Sarah</button>
+  </div>
+</div>
+</div>
+
+<!-- HEADER -->
+<header>
+  <div class="hl">
+    <div class="hlogo">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2">
+        <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+      </svg>
+    </div>
+    <div>
+      <div class="htitle">PSYC1040 Workshop Manager</div>
+      <div class="hsub">Tues 8am &middot; Thu 12pm &middot; Thu 2pm</div>
+    </div>
+  </div>
+  <div class="hr">
+    <div class="sync" id="sync"><div class="dot"></div><span id="sync-txt">Loading&hellip;</span></div>
+    <button class="btn btn-s btn-sm" onclick="refreshData()">&#8635;&nbsp;Refresh</button>
+    <div class="uchip" onclick="changeUser()">
+      <div class="uav" id="uav">?</div>
+      <span id="uname">Not set</span>
+    </div>
+  </div>
+</header>
+
+<!-- STATS -->
+<div id="stats">
+  <div class="sc2 s-tot">
+    <div class="si2"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg></div>
+    <div><div class="sv" id="s-tot">—</div><div class="sl">Total</div></div>
+  </div>
+  <div class="sc2 s-una">
+    <div class="si2"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div>
+    <div><div class="sv" id="s-una">—</div><div class="sl">Unassigned</div></div>
+  </div>
+  <div class="sc2 s-tue">
+    <div class="si2"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
+    <div><div class="sv" id="s-tue">—</div><div class="sl">Tues 8am</div></div>
+  </div>
+  <div class="sc2 s-t12">
+    <div class="si2"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
+    <div><div class="sv" id="s-t12">—</div><div class="sl">Thu 12pm</div></div>
+  </div>
+  <div class="sc2 s-t2">
+    <div class="si2"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
+    <div><div class="sv" id="s-t2">—</div><div class="sl">Thu 2pm</div></div>
+  </div>
+</div>
+
+<!-- CONTROLS -->
+<div id="controls">
+  <div class="sw">
+    <svg viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    <input id="q" class="si3" placeholder="Search by name or student ID&hellip;" oninput="go()">
+  </div>
+  <select id="f-ws" class="fs" onchange="go()">
+    <option value="">All workshops</option>
+    <option value="Tues 8am">Tues 8am</option>
+    <option value="Thu 12">Thu 12pm</option>
+    <option value="Thu 2">Thu 2pm</option>
+  </select>
+  <select id="f-tutor" class="fs" onchange="go()">
+    <option value="">All tutors</option>
+    <option>Carly</option><option>Henrik</option><option>Raveen</option>
+    <option>Samantha</option><option>Samuel</option><option>Sarah</option>
+  </select>
+  <select id="f-st" class="fs" onchange="go()">
+    <option value="">All students</option>
+    <option value="a">Assigned only</option>
+    <option value="u">Unassigned only</option>
+  </select>
+  <span class="rc" id="rc"></span>
+</div>
+
+<!-- TABLE -->
+<div id="tw">
+  <div id="loading"><div class="spin"></div>Loading student data&hellip;</div>
+  <table id="tbl" style="display:none">
+    <thead><tr>
+      <th onclick="srt('id')" data-c="id">Student ID <span id="arr-id">&#8597;</span></th>
+      <th onclick="srt('last')" data-c="last">Name <span id="arr-last">&#8595;</span></th>
+      <th onclick="srt('workshop')" data-c="workshop">Workshop <span id="arr-workshop">&#8597;</span></th>
+      <th onclick="srt('table')" data-c="table">Table <span id="arr-table">&#8597;</span></th>
+      <th onclick="srt('tutor')" data-c="tutor">Tutor <span id="arr-tutor">&#8597;</span></th>
+    </tr></thead>
+    <tbody id="tb"></tbody>
+  </table>
+  <div id="empty" class="empty" style="display:none">
+    <svg viewBox="0 0 24 24" fill="none" stroke="#d1d5db" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    <h3>No students match your filters</h3>
+    <p>Try adjusting your search or clearing a filter.</p>
+  </div>
+</div>
+<div id="toast"></div>
+
+<script>
+// ── CONFIG ──────────────────────────────────────
+const BLOB_ID = "019cdf50-cf59-7482-94aa-cb735c11c579";
+const API = "https://jsonblob.com/api/jsonBlob/" + BLOB_ID;
+
+// ── TABLE→TUTOR MAP ─────────────────────────────
+const TT = {
+  "Tues 8am":{1:"Carly",2:"Carly",3:"Carly",4:"Carly",5:"Samuel",6:"Samuel",7:"Samuel",8:"Samuel",9:"Samantha",10:"Samantha",11:"Samantha",12:"Samantha",13:"Raveen",14:"Raveen",15:"Raveen",16:"Raveen",17:"Sarah",18:"Sarah",19:"Sarah",20:"Sarah",21:"Sarah, Henrik",22:"Henrik",23:"Henrik",24:"Henrik",25:"Henrik"},
+  "Thu 12":{1:"Sarah",2:"Sarah",3:"Sarah",4:"Sarah",5:"Raveen",6:"Raveen",7:"Raveen",8:"Raveen",9:"Henrik",10:"Henrik",11:"Henrik",12:"Henrik",13:"Carly",14:"Carly",15:"Carly",16:"Carly",17:"Samuel",18:"Samuel",19:"Samuel",20:"Samuel",21:"Samuel, Samantha",22:"Samantha",23:"Samantha",24:"Samantha",25:"Samantha"},
+  "Thu 2":{1:"Samantha",2:"Samantha",3:"Samantha",4:"Samantha",5:"Henrik",6:"Henrik",7:"Henrik",8:"Henrik",9:"Sarah",10:"Sarah",11:"Sarah",12:"Sarah",13:"Samuel",14:"Samuel",15:"Samuel",16:"Samuel",17:"Carly",18:"Carly",19:"Carly",20:"Carly",21:"Carly, Raveen",22:"Raveen",23:"Raveen",24:"Raveen",25:"Raveen"}
+};
+
+// ── INITIAL DATA ─────────────────────────────────
+const SEED = [{"id":"48929420","first":"Farah","last":"Akbar","workshop":"Tues 8am","table":null,"tutor":""},{"id":"50276257","first":"Bahareh","last":"Aklaqi","workshop":"Tues 8am","table":null,"tutor":""},{"id":"49609037","first":"Oliver","last":"Alker","workshop":"Tues 8am","table":24,"tutor":"Henrik"},{"id":"49203686","first":"Bridie","last":"Allen","workshop":"Tues 8am","table":15,"tutor":"Raveen"},{"id":"50348659","first":"Toby","last":"Artiach","workshop":"Tues 8am","table":13,"tutor":"Raveen"},{"id":"49598869","first":".","last":"Ashmandeep Kaur","workshop":"Tues 8am","table":10,"tutor":"Samantha"},{"id":"50118991","first":"Benjamin","last":"Atia","workshop":"Tues 8am","table":4,"tutor":"Carly"},{"id":"48085997","first":"Sameer","last":"Baad","workshop":"Tues 8am","table":7,"tutor":"Samuel"},{"id":"50360503","first":"Bianca","last":"Baggio","workshop":"Tues 8am","table":2,"tutor":"Carly"},{"id":"50372672","first":"Jaimie","last":"Becker","workshop":"Tues 8am","table":6,"tutor":"Samuel"},{"id":"50117565","first":"Lily","last":"Belcher","workshop":"Tues 8am","table":17,"tutor":"Sarah"},{"id":"49731947","first":"Isaac","last":"Bennett","workshop":"Tues 8am","table":9,"tutor":"Samantha"},{"id":"50311877","first":"Isabelle","last":"Beresford","workshop":"Tues 8am","table":21,"tutor":"Sarah, Henrik"},{"id":"48824374","first":"Khairun Nabihah","last":"Binte Zainal 'Abidin","workshop":"Tues 8am","table":23,"tutor":"Henrik"},{"id":"50311886","first":"Tayla","last":"Boddy","workshop":"Tues 8am","table":25,"tutor":"Henrik"},{"id":"50277704","first":"Lucas","last":"Bowes","workshop":"Tues 8am","table":11,"tutor":"Samantha"},{"id":"49802753","first":"Danielle","last":"Bredenhann","workshop":"Tues 8am","table":3,"tutor":"Carly"},{"id":"48094122","first":"Harriett","last":"Bridge","workshop":"Tues 8am","table":16,"tutor":"Raveen"},{"id":"50355554","first":"Benjamin","last":"Bright","workshop":"Tues 8am","table":5,"tutor":"Samuel"},{"id":"50269932","first":"Ethan","last":"Brown","workshop":"Tues 8am","table":14,"tutor":"Raveen"},{"id":"50300116","first":"Eloise","last":"Cacopardo","workshop":"Tues 8am","table":18,"tutor":"Sarah"},{"id":"50310553","first":"Chatarina","last":"Cahyaningtyas","workshop":"Tues 8am","table":8,"tutor":"Samuel"},{"id":"49711088","first":"Erin","last":"Cameron","workshop":"Tues 8am","table":12,"tutor":"Samantha"},{"id":"48833787","first":"Mattayah","last":"Cameron","workshop":"Tues 8am","table":1,"tutor":"Carly"},{"id":"50363830","first":"Brandon","last":"Chai","workshop":"Tues 8am","table":19,"tutor":"Sarah"},{"id":"49510928","first":"John","last":"Chang","workshop":"Tues 8am","table":20,"tutor":"Sarah"},{"id":"50304954","first":"Qihuan","last":"Chen","workshop":"Tues 8am","table":15,"tutor":"Raveen"},{"id":"46423166","first":"Sean","last":"Chen","workshop":"Tues 8am","table":null,"tutor":""},{"id":"49633180","first":"Nathaniel","last":"Chow","workshop":"Tues 8am","table":13,"tutor":"Raveen"},{"id":"49700505","first":"Lisara","last":"Chulatunga","workshop":"Tues 8am","table":10,"tutor":"Samantha"},{"id":"50352311","first":"Jennrady","last":"Chum","workshop":"Tues 8am","table":4,"tutor":"Carly"},{"id":"50280991","first":"Sia","last":"Chun","workshop":"Tues 8am","table":7,"tutor":"Samuel"},{"id":"49134249","first":"Raisa","last":"Contreras","workshop":"Tues 8am","table":12,"tutor":"Samantha"},{"id":"49703195","first":"Maria","last":"Cortes","workshop":"Tues 8am","table":6,"tutor":"Samuel"},{"id":"47703436","first":"Erik","last":"De Almeida Albert","workshop":"Tues 8am","table":17,"tutor":"Sarah"},{"id":"49629307","first":"Zoe","last":"De Leenheer","workshop":"Tues 8am","table":null,"tutor":""},{"id":"50281185","first":"Anna","last":"Diaz-farron","workshop":"Tues 8am","table":9,"tutor":"Samantha"},{"id":"50297702","first":"Brigette","last":"Dixon","workshop":"Tues 8am","table":null,"tutor":""},{"id":"50201923","first":"Kevin","last":"Dizon","workshop":"Tues 8am","table":21,"tutor":"Sarah, Henrik"},{"id":"49100785","first":"Laura","last":"Donnelly","workshop":"Tues 8am","table":22,"tutor":"Henrik"},{"id":"50293405","first":"Noah","last":"Dreaver","workshop":"Tues 8am","table":23,"tutor":"Henrik"},{"id":"50111424","first":"Ekaterina","last":"Drinnan","workshop":"Tues 8am","table":25,"tutor":"Henrik"},{"id":"50287507","first":"Kaylan","last":"Dubbeldam","workshop":"Tues 8am","table":null,"tutor":""},{"id":"50342590","first":"Robbie","last":"Evans","workshop":"Tues 8am","table":3,"tutor":"Carly"},{"id":"50299591","first":"Meisha","last":"Fagerstrom","workshop":"Tues 8am","table":16,"tutor":"Raveen"},{"id":"50201932","first":"Brooklyn","last":"Ferguson","workshop":"Tues 8am","table":14,"tutor":"Raveen"},{"id":"49585234","first":"Aidan","last":"Gardso","workshop":"Tues 8am","table":18,"tutor":"Sarah"},{"id":"44364573","first":"Matilda","last":"George","workshop":"Tues 8am","table":null,"tutor":""},{"id":"50268403","first":"Kaelyn","last":"Gordon","workshop":"Tues 8am","table":8,"tutor":"Samuel"},{"id":"49914508","first":"Jasmine","last":"Gowland","workshop":"Tues 8am","table":2,"tutor":"Carly"},{"id":"48869870","first":"Annabella","last":"Green","workshop":"Tues 8am","table":1,"tutor":"Carly"},{"id":"49903539","first":"Joel","last":"Grimes","workshop":"Tues 8am","table":19,"tutor":"Sarah"},{"id":"50272316","first":"Henry","last":"Grosser","workshop":"Tues 8am","table":20,"tutor":"Sarah"},{"id":"50117707","first":"Lina","last":"Halvorson","workshop":"Tues 8am","table":5,"tutor":"Samuel"},{"id":"49843242","first":"Natalie","last":"Hamilton","workshop":"Tues 8am","table":22,"tutor":"Henrik"},{"id":"50298307","first":"Ruining","last":"Han","workshop":"Tues 8am","table":19,"tutor":"Sarah"},{"id":"50280441","first":"Caroline","last":"Hankey","workshop":"Tues 8am","table":10,"tutor":"Samantha"},{"id":"49639212","first":"Imelda","last":"Hardman","workshop":"Tues 8am","table":4,"tutor":"Carly"},{"id":"50264508","first":"Alice","last":"Harvey","workshop":"Tues 8am","table":7,"tutor":"Samuel"},{"id":"50346280","first":"Jackson","last":"Hastings","workshop":"Tues 8am","table":12,"tutor":"Samantha"},{"id":"49710036","first":"Stephinee","last":"Herrmann","workshop":"Tues 8am","table":6,"tutor":"Samuel"},{"id":"49580350","first":"Angus","last":"Hodges","workshop":"Tues 8am","table":17,"tutor":"Sarah"},{"id":"50356757","first":"Phoebe","last":"Holm","workshop":"Tues 8am","table":21,"tutor":"Sarah, Henrik"},{"id":"50370847","first":"Grace","last":"Holmes","workshop":"Tues 8am","table":null,"tutor":""},{"id":"50281943","first":"Priya","last":"Horan","workshop":"Tues 8am","table":23,"tutor":"Henrik"},{"id":"49661932","first":"Lille","last":"Inglis","workshop":"Tues 8am","table":null,"tutor":""},{"id":"49659911","first":"Zo","last":"Jamroz","workshop":"Tues 8am","table":25,"tutor":"Henrik"},{"id":"50270880","first":"Lila","last":"Jolly","workshop":"Tues 8am","table":11,"tutor":"Samantha"},{"id":"49684744","first":"Elias","last":"Jones","workshop":"Tues 8am","table":3,"tutor":"Carly"},{"id":"49695517","first":"Sanjam","last":"Kaur","workshop":"Tues 8am","table":16,"tutor":"Raveen"},{"id":"49514672","first":"Hudson","last":"Kelly","workshop":"Tues 8am","table":24,"tutor":"Henrik"},{"id":"49631467","first":"Charley","last":"Kenny","workshop":"Tues 8am","table":14,"tutor":"Raveen"},{"id":"50307003","first":"Chelsea","last":"Kiely","workshop":"Tues 8am","table":18,"tutor":"Sarah"},{"id":"50237904","first":"Ashleigh","last":"Kneipp","workshop":"Tues 8am","table":null,"tutor":""},{"id":"48836434","first":"Cooper","last":"Langford","workshop":"Tues 8am","table":2,"tutor":"Carly"},{"id":"50271784","first":"Marcus","last":"Leadbetter","workshop":"Tues 8am","table":1,"tutor":"Carly"},{"id":"49632624","first":"Amelia","last":"Lewis-Castle","workshop":"Tues 8am","table":20,"tutor":"Sarah"},{"id":"50297672","first":"Vivien","last":"Li","workshop":"Tues 8am","table":24,"tutor":"Henrik"},{"id":"49610613","first":"Xinyi","last":"Lin","workshop":"Tues 8am","table":5,"tutor":"Samuel"},{"id":"50207149","first":"Jinshan","last":"Liu","workshop":"Tues 8am","table":10,"tutor":"Samantha"},{"id":"50285718","first":"Zhijun","last":"Liu","workshop":"Tues 8am","table":4,"tutor":"Carly"},{"id":"49607501","first":"Zimo","last":"Liu","workshop":"Tues 8am","table":null,"tutor":""},{"id":"50294466","first":"Kathy","last":"Luo","workshop":"Tues 8am","table":7,"tutor":"Samuel"},{"id":"50364033","first":"Xintong","last":"Lyu","workshop":"Tues 8am","table":12,"tutor":"Samantha"},{"id":"50284131","first":"Leila","last":"Macdonald","workshop":"Tues 8am","table":6,"tutor":"Samuel"},{"id":"48855743","first":"Jesse","last":"Marks","workshop":"Tues 8am","table":9,"tutor":"Samantha"},{"id":"50096594","first":"Sarah","last":"Marshman","workshop":"Tues 8am","table":21,"tutor":"Sarah, Henrik"},{"id":"50271346","first":"Winnie","last":"Mastores","workshop":"Tues 8am","table":22,"tutor":"Henrik"},{"id":"48818494","first":"Jacob","last":"Matthews","workshop":"Tues 8am","table":23,"tutor":"Henrik"},{"id":"46780216","first":"Liam","last":"McBride","workshop":"Tues 8am","table":25,"tutor":"Henrik"},{"id":"50353448","first":"Emilia","last":"McKeering-Smith","workshop":"Tues 8am","table":11,"tutor":"Samantha"},{"id":"50361292","first":"Rosie","last":"Meagher","workshop":"Tues 8am","table":3,"tutor":"Carly"},{"id":"50273760","first":"Joshua","last":"Millard","workshop":"Tues 8am","table":16,"tutor":"Raveen"},{"id":"49699467","first":"Siena","last":"Miscamble","workshop":"Tues 8am","table":5,"tutor":"Samuel"},{"id":"50313639","first":"Hannah","last":"Mitchell","workshop":"Tues 8am","table":14,"tutor":"Raveen"},{"id":"49334825","first":"Amina","last":"Moafi Madani","workshop":"Tues 8am","table":null,"tutor":""},{"id":"49710362","first":"Haylie","last":"Morton","workshop":"Tues 8am","table":null,"tutor":""},{"id":"48486428","first":"Emily","last":"Muller","workshop":"Tues 8am","table":8,"tutor":"Samuel"},{"id":"50366000","first":"Mahee","last":"Navaratne","workshop":"Tues 8am","table":null,"tutor":""},{"id":"50014075","first":"Gia Minh","last":"Nguyen","workshop":"Tues 8am","table":19,"tutor":"Sarah"},{"id":"49789014","first":"Thao Anh Minh","last":"Nguyen","workshop":"Tues 8am","table":1,"tutor":"Carly"},{"id":"49065549","first":"Ebony","last":"Norris","workshop":"Tues 8am","table":20,"tutor":"Sarah"},{"id":"50292958","first":"Elizabeth","last":"Nugent","workshop":"Tues 8am","table":24,"tutor":"Henrik"},{"id":"49610118","first":"Pranay","last":"Parmar","workshop":"Tues 8am","table":null,"tutor":""},{"id":"45297119","first":"Ethan","last":"Parzybok","workshop":"Tues 8am","table":13,"tutor":"Raveen"},{"id":"49631506","first":"Sasha","last":"Peach","workshop":"Tues 8am","table":10,"tutor":"Samantha"},{"id":"49557615","first":"Aidan","last":"Pennells","workshop":"Tues 8am","table":4,"tutor":"Carly"},{"id":"50303340","first":"Royston","last":"Peterson","workshop":"Tues 8am","table":7,"tutor":"Samuel"},{"id":"50268168","first":"Adalyn","last":"Pohl","workshop":"Tues 8am","table":12,"tutor":"Samantha"},{"id":"50365478","first":"Lucy","last":"Pree","workshop":"Tues 8am","table":6,"tutor":"Samuel"},{"id":"50308130","first":"Jada","last":"Ram","workshop":"Tues 8am","table":17,"tutor":"Sarah"},{"id":"48912806","first":"Sarah","last":"Ramsay","workshop":"Tues 8am","table":9,"tutor":"Samantha"},{"id":"50366653","first":"Julia","last":"Rathie","workshop":"Tues 8am","table":21,"tutor":"Sarah, Henrik"},{"id":"50121816","first":"Aneta","last":"Rusovska","workshop":"Tues 8am","table":null,"tutor":""},{"id":"50238031","first":"Nishtha","last":"Sachdeva","workshop":"Tues 8am","table":23,"tutor":"Henrik"},{"id":"49599558","first":"Piper","last":"Schmerl","workshop":"Tues 8am","table":25,"tutor":"Henrik"},{"id":"50287664","first":"Lara","last":"Schofield","workshop":"Tues 8am","table":11,"tutor":"Samantha"},{"id":"49618824","first":"Imogen","last":"Sell","workshop":"Tues 8am","table":3,"tutor":"Carly"},{"id":"49990043","first":"Aditya","last":"Shah","workshop":"Tues 8am","table":16,"tutor":"Raveen"},{"id":"50364556","first":"Hayden","last":"Shelton","workshop":"Tues 8am","table":5,"tutor":"Samuel"},{"id":"49693371","first":"Anishka","last":"Singh","workshop":"Tues 8am","table":14,"tutor":"Raveen"},{"id":"50263958","first":"Amelia","last":"Smith","workshop":"Tues 8am","table":18,"tutor":"Sarah"},{"id":"48918778","first":"Emma","last":"Smith","workshop":"Tues 8am","table":8,"tutor":"Samuel"},{"id":"50281925","first":"Zahlia","last":"Smith","workshop":"Tues 8am","table":2,"tutor":"Carly"},{"id":"50310759","first":"Kevin","last":"Soby","workshop":"Tues 8am","table":1,"tutor":"Carly"},{"id":"50289819","first":"Samantha","last":"Tallis","workshop":"Tues 8am","table":6,"tutor":"Samuel"},{"id":"48928320","first":"Maja","last":"Tari-Keresztes","workshop":"Tues 8am","table":15,"tutor":"Raveen"},{"id":"50375516","first":"Maddy","last":"Thomas","workshop":"Tues 8am","table":13,"tutor":"Raveen"},{"id":"50283723","first":"Ella","last":"Thornhill","workshop":"Tues 8am","table":10,"tutor":"Samantha"},{"id":"49618600","first":"Sam","last":"Throp","workshop":"Tues 8am","table":4,"tutor":"Carly"},{"id":"48967664","first":"Emily","last":"Tierney","workshop":"Tues 8am","table":7,"tutor":"Samuel"},{"id":"50282913","first":"Rakshitha","last":"Vadivel","workshop":"Tues 8am","table":12,"tutor":"Samantha"},{"id":"49637487","first":"Matilda","last":"Voisey","workshop":"Tues 8am","table":17,"tutor":"Sarah"},{"id":"50272361","first":"Valentina","last":"Wagner Medeiros","workshop":"Tues 8am","table":9,"tutor":"Samantha"},{"id":"50284533","first":"Jude","last":"Wahl","workshop":"Tues 8am","table":21,"tutor":"Sarah, Henrik"},{"id":"49421510","first":"Ella","last":"Walker","workshop":"Tues 8am","table":23,"tutor":"Henrik"},{"id":"50345041","first":"Tess","last":"Walker","workshop":"Tues 8am","table":22,"tutor":"Henrik"},{"id":"50298594","first":"Xinlin","last":"Wan","workshop":"Tues 8am","table":25,"tutor":"Henrik"},{"id":"49697669","first":"Chengye","last":"Wang","workshop":"Tues 8am","table":3,"tutor":"Carly"},{"id":"50363492","first":"Kuijun","last":"Wang","workshop":"Tues 8am","table":11,"tutor":"Samantha"},{"id":"50291773","first":"Zixuan","last":"Wang","workshop":"Tues 8am","table":16,"tutor":"Raveen"},{"id":"50295995","first":"Susannah","last":"Watson","workshop":"Tues 8am","table":null,"tutor":""},{"id":"50348761","first":"Lara","last":"Webre","workshop":"Tues 8am","table":14,"tutor":"Raveen"},{"id":"50264665","first":"Ellen","last":"Whiley","workshop":"Tues 8am","table":18,"tutor":"Sarah"},{"id":"50118964","first":"Catherine","last":"Whitehead","workshop":"Tues 8am","table":8,"tutor":"Samuel"},{"id":"49572391","first":"Alex","last":"Williams","workshop":"Tues 8am","table":2,"tutor":"Carly"},{"id":"49496581","first":"Ava","last":"Wong","workshop":"Tues 8am","table":1,"tutor":"Carly"},{"id":"50354146","first":"Chia-Yu","last":"Wu","workshop":"Tues 8am","table":19,"tutor":"Sarah"},{"id":"48953199","first":"Wanyun","last":"Wu","workshop":"Tues 8am","table":20,"tutor":"Sarah"},{"id":"50344026","first":"Obi","last":"Wynn","workshop":"Tues 8am","table":null,"tutor":""},{"id":"41473531","first":"Shengwen","last":"Xu","workshop":"Tues 8am","table":9,"tutor":"Samantha"},{"id":"50364118","first":"Hao","last":"Yang","workshop":"Tues 8am","table":null,"tutor":""},{"id":"50269183","first":"Alexander","last":"Yates","workshop":"Tues 8am","table":23,"tutor":"Henrik"},{"id":"49231045","first":"Yangyang","last":"Yi","workshop":"Tues 8am","table":null,"tutor":""},{"id":"48766625","first":"Isabella","last":"Yu","workshop":"Tues 8am","table":21,"tutor":"Sarah, Henrik"},{"id":"50390658","first":"Isabella","last":"Arruda","workshop":"Thu 12","table":2,"tutor":"Sarah"},{"id":"49619447","first":"Vincent","last":"Barnes","workshop":"Thu 12","table":3,"tutor":"Sarah"},{"id":"49614321","first":"Indigo","last":"Barrett","workshop":"Thu 12","table":4,"tutor":"Sarah"},{"id":"49160873","first":"Charlotte","last":"Bennett","workshop":"Thu 12","table":5,"tutor":"Raveen"},{"id":"50301412","first":"Katalina","last":"Bettridge","workshop":"Thu 12","table":6,"tutor":"Raveen"},{"id":"50271092","first":"Grace","last":"Bird","workshop":"Thu 12","table":7,"tutor":"Raveen"},{"id":"50358023","first":"Charlotte","last":"Blaik","workshop":"Thu 12","table":8,"tutor":"Raveen"},{"id":"50238376","first":"Sophia","last":"Blyth","workshop":"Thu 12","table":9,"tutor":"Henrik"},{"id":"50361108","first":"Tegen","last":"Brett","workshop":"Thu 12","table":10,"tutor":"Henrik"},{"id":"50344839","first":"Harriet","last":"Brown","workshop":"Thu 12","table":11,"tutor":"Henrik"},{"id":"50305782","first":"Jazlyn","last":"Browning","workshop":"Thu 12","table":12,"tutor":"Henrik"},{"id":"50288942","first":"Charlie","last":"Bruce","workshop":"Thu 12","table":13,"tutor":"Carly"},{"id":"50366466","first":"Sabriya","last":"Bumatay","workshop":"Thu 12","table":14,"tutor":"Carly"},{"id":"50288250","first":"Summer","last":"Bunting","workshop":"Thu 12","table":15,"tutor":"Carly"},{"id":"50290600","first":"Riley","last":"Burke","workshop":"Thu 12","table":16,"tutor":"Carly"},{"id":"50268627","first":"Jacob","last":"Cadzow","workshop":"Thu 12","table":17,"tutor":"Samuel"},{"id":"50275380","first":"Jaida","last":"Campbell","workshop":"Thu 12","table":18,"tutor":"Samuel"},{"id":"50307807","first":"Flora","last":"Cardell-Ree","workshop":"Thu 12","table":19,"tutor":"Samuel"},{"id":"49620649","first":"Bindi","last":"Chan","workshop":"Thu 12","table":20,"tutor":"Samuel"},{"id":"49996586","first":"Hiu Yue","last":"Chan","workshop":"Thu 12","table":21,"tutor":"Samuel, Samantha"},{"id":"50032707","first":"Yichang","last":"Chen","workshop":"Thu 12","table":7,"tutor":"Raveen"},{"id":"49260111","first":"Chloe Mun Wai","last":"Cheong","workshop":"Thu 12","table":23,"tutor":"Samantha"},{"id":"50265699","first":"Abigail","last":"Christie","workshop":"Thu 12","table":24,"tutor":"Samantha"},{"id":"48830245","first":"Harry","last":"Clark","workshop":"Thu 12","table":1,"tutor":"Sarah"},{"id":"49641251","first":"Skye","last":"Clifford","workshop":"Thu 12","table":2,"tutor":"Sarah"},{"id":"50304730","first":"Konnie","last":"Coleman","workshop":"Thu 12","table":3,"tutor":"Sarah"},{"id":"49451209","first":"Serena","last":"Cui","workshop":"Thu 12","table":4,"tutor":"Sarah"},{"id":"50118030","first":"Nathan","last":"Dascombe","workshop":"Thu 12","table":5,"tutor":"Raveen"},{"id":"50343971","first":"Abigail","last":"Dixon","workshop":"Thu 12","table":6,"tutor":"Raveen"},{"id":"50365553","first":"Isha","last":"Doddi","workshop":"Thu 12","table":7,"tutor":"Raveen"},{"id":"50278569","first":"Sienna","last":"Doe","workshop":"Thu 12","table":8,"tutor":"Raveen"},{"id":"49671678","first":"Ruixi","last":"Dong","workshop":"Thu 12","table":9,"tutor":"Henrik"},{"id":"50287794","first":"Aj","last":"Du Plessis","workshop":"Thu 12","table":10,"tutor":"Henrik"},{"id":"50277423","first":"Cormaic","last":"Dunne","workshop":"Thu 12","table":11,"tutor":"Henrik"},{"id":"50266285","first":"Ingrid","last":"Elliott","workshop":"Thu 12","table":12,"tutor":"Henrik"},{"id":"50287338","first":"Ameesha","last":"Fernando","workshop":"Thu 12","table":14,"tutor":"Carly"},{"id":"49642641","first":"Porscha","last":"Fernando","workshop":"Thu 12","table":13,"tutor":"Carly"},{"id":"49620238","first":"Tupou","last":"Filo","workshop":"Thu 12","table":15,"tutor":"Carly"},{"id":"50297926","first":"Amelie","last":"Gaughan","workshop":"Thu 12","table":16,"tutor":"Carly"},{"id":"49970410","first":"Angel","last":"Gay","workshop":"Thu 12","table":17,"tutor":"Samuel"},{"id":"50305371","first":"Ewan","last":"Gregson","workshop":"Thu 12","table":18,"tutor":"Samuel"},{"id":"50048182","first":"Siqi","last":"Gu","workshop":"Thu 12","table":19,"tutor":"Samuel"},{"id":"49515062","first":"Miaomiao","last":"Guo","workshop":"Thu 12","table":20,"tutor":"Samuel"},{"id":"50356300","first":"Tigerlily","last":"Harper","workshop":"Thu 12","table":null,"tutor":""},{"id":"50271412","first":"Oliver","last":"Hayes","workshop":"Thu 12","table":21,"tutor":"Samuel, Samantha"},{"id":"50348695","first":"Charlotte","last":"Herron","workshop":"Thu 12","table":23,"tutor":"Samantha"},{"id":"48744744","first":"Elijah","last":"Hoon","workshop":"Thu 12","table":24,"tutor":"Samantha"},{"id":"50300068","first":"Ava","last":"Howley","workshop":"Thu 12","table":25,"tutor":"Samantha"},{"id":"48970589","first":"Cangde","last":"Huang","workshop":"Thu 12","table":1,"tutor":"Sarah"},{"id":"48996897","first":"Katherine","last":"Hughes","workshop":"Thu 12","table":2,"tutor":"Sarah"},{"id":"49608106","first":"Joshua","last":"Humphreys","workshop":"Thu 12","table":5,"tutor":"Raveen"},{"id":"49297564","first":"Leem","last":"Husham","workshop":"Thu 12","table":4,"tutor":"Sarah"},{"id":"50347746","first":"Mai","last":"Huynh","workshop":"Thu 12","table":5,"tutor":"Raveen"},{"id":"49601228","first":"Ellie-Grace","last":"Jack","workshop":"Thu 12","table":7,"tutor":"Raveen"},{"id":"49843327","first":"Khushali","last":"Jain","workshop":"Thu 12","table":8,"tutor":"Raveen"},{"id":"48843302","first":"Kat","last":"Johansen","workshop":"Thu 12","table":9,"tutor":"Henrik"},{"id":"48903514","first":"Soomin","last":"Jung","workshop":"Thu 12","table":10,"tutor":"Henrik"},{"id":"49560400","first":"Alyssa","last":"Kambarbakis","workshop":"Thu 12","table":11,"tutor":"Henrik"},{"id":"49679665","first":"Pari Sampadagirish","last":"Kharkar","workshop":"Thu 12","table":12,"tutor":"Henrik"},{"id":"50271609","first":"Summer","last":"Khoo","workshop":"Thu 12","table":13,"tutor":"Carly"},{"id":"50266388","first":"Zoe","last":"Kirkpatrick","workshop":"Thu 12","table":14,"tutor":"Carly"},{"id":"50352012","first":"Mahalee","last":"Knights","workshop":"Thu 12","table":15,"tutor":"Carly"},{"id":"50390760","first":"Oliver","last":"Knowles-Green","workshop":"Thu 12","table":16,"tutor":"Carly"},{"id":"49542835","first":"Hinata","last":"Koizumi","workshop":"Thu 12","table":17,"tutor":"Samuel"},{"id":"49886098","first":"Byeol","last":"Kweon","workshop":"Thu 12","table":null,"tutor":""},{"id":"50273014","first":"Matthew","last":"Lai","workshop":"Thu 12","table":19,"tutor":"Samuel"},{"id":"50298428","first":"Josephine","last":"Lapping","workshop":"Thu 12","table":20,"tutor":"Samuel"},{"id":"50299528","first":"Jorja","last":"Leane","workshop":"Thu 12","table":21,"tutor":"Samuel, Samantha"},{"id":"50208007","first":"Lok Tung","last":"Lee","workshop":"Thu 12","table":24,"tutor":"Samantha"},{"id":"50086791","first":"Naysa Qiao Er","last":"Lee","workshop":"Thu 12","table":23,"tutor":"Samantha"},{"id":"50307870","first":"Christopher","last":"Lewis","workshop":"Thu 12","table":25,"tutor":"Samantha"},{"id":"46886538","first":"Wenjiao","last":"Li","workshop":"Thu 12","table":1,"tutor":"Sarah"},{"id":"49729636","first":"Jin Ying","last":"Lim","workshop":"Thu 12","table":2,"tutor":"Sarah"},{"id":"50255757","first":"Juha","last":"Lim","workshop":"Thu 12","table":3,"tutor":"Sarah"},{"id":"49927281","first":"Shang","last":"Lin","workshop":"Thu 12","table":6,"tutor":"Raveen"},{"id":"49275151","first":"Ziqi","last":"Lin","workshop":"Thu 12","table":4,"tutor":"Sarah"},{"id":"49625402","first":"Griffin","last":"Lloyd","workshop":"Thu 12","table":7,"tutor":"Raveen"},{"id":"48835688","first":"Sahara","last":"Lohrisch","workshop":"Thu 12","table":8,"tutor":"Raveen"},{"id":"49693335","first":"Larissa","last":"Loveday","workshop":"Thu 12","table":9,"tutor":"Henrik"},{"id":"50303096","first":"Ava","last":"Lovell","workshop":"Thu 12","table":10,"tutor":"Henrik"},{"id":"50278961","first":"Annabelle","last":"Lu","workshop":"Thu 12","table":11,"tutor":"Henrik"},{"id":"49315310","first":"Kelly","last":"Luo","workshop":"Thu 12","table":12,"tutor":"Henrik"},{"id":"48157474","first":"Jiayi","last":"Ma","workshop":"Thu 12","table":13,"tutor":"Carly"},{"id":"50350979","first":"Miya","last":"Mahoney","workshop":"Thu 12","table":14,"tutor":"Carly"},{"id":"50360987","first":"Mia","last":"Makras","workshop":"Thu 12","table":15,"tutor":"Carly"},{"id":"50309847","first":"Isabel","last":"Marks","workshop":"Thu 12","table":16,"tutor":"Carly"},{"id":"50271074","first":"Andrea","last":"Mathews","workshop":"Thu 12","table":17,"tutor":"Samuel"},{"id":"50283282","first":"Francesca","last":"Matthews","workshop":"Thu 12","table":18,"tutor":"Samuel"},{"id":"50371769","first":"Jordan","last":"McCulloch","workshop":"Thu 12","table":19,"tutor":"Samuel"},{"id":"50293076","first":"Laura","last":"McGann","workshop":"Thu 12","table":20,"tutor":"Samuel"},{"id":"49618954","first":"Helena","last":"McKay","workshop":"Thu 12","table":21,"tutor":"Samuel, Samantha"},{"id":"50342880","first":"Mackenzie","last":"McKeon","workshop":"Thu 12","table":22,"tutor":"Samantha"},{"id":"49642016","first":"Starcia","last":"McNulty","workshop":"Thu 12","table":null,"tutor":""},{"id":"50298585","first":"Thomas","last":"Mears","workshop":"Thu 12","table":23,"tutor":"Samantha"},{"id":"50358340","first":"Ava","last":"Merriweather","workshop":"Thu 12","table":24,"tutor":"Samantha"},{"id":"50282379","first":"Leila","last":"Mitrakis","workshop":"Thu 12","table":25,"tutor":"Samantha"},{"id":"49994621","first":"Karama","last":"Mutunga","workshop":"Thu 12","table":2,"tutor":"Sarah"},{"id":"50374274","first":"Vivian Huynh","last":"Nguyen","workshop":"Thu 12","table":3,"tutor":"Sarah"},{"id":"50124563","first":"Wenxi","last":"Nie","workshop":"Thu 12","table":null,"tutor":""},{"id":"50359794","first":"Ashley","last":"Nimmo","workshop":"Thu 12","table":4,"tutor":"Sarah"},{"id":"50265457","first":"Brooke","last":"O'Donovan","workshop":"Thu 12","table":5,"tutor":"Raveen"},{"id":"50369104","first":"Lana","last":"O'Gorman","workshop":"Thu 12","table":6,"tutor":"Raveen"},{"id":"50279146","first":"Savannah","last":"O'Mara","workshop":"Thu 12","table":7,"tutor":"Raveen"},{"id":"49629464","first":"Clara","last":"Oliveira Munro","workshop":"Thu 12","table":8,"tutor":"Raveen"},{"id":"50308514","first":"Isabella","last":"Omeros","workshop":"Thu 12","table":9,"tutor":"Henrik"},{"id":"47925210","first":"Sydney","last":"Park","workshop":"Thu 12","table":10,"tutor":"Henrik"},{"id":"50270107","first":"Tvisha","last":"Patel","workshop":"Thu 12","table":11,"tutor":"Henrik"},{"id":"49289608","first":"Katherine","last":"Pegler","workshop":"Thu 12","table":12,"tutor":"Henrik"},{"id":"50353653","first":"Dante","last":"Pelosi","workshop":"Thu 12","table":13,"tutor":"Carly"},{"id":"50343122","first":"Sienna","last":"Pereira","workshop":"Thu 12","table":14,"tutor":"Carly"},{"id":"50369458","first":"Katy","last":"Phung","workshop":"Thu 12","table":15,"tutor":"Carly"},{"id":"48902012","first":"Mia","last":"Pratt","workshop":"Thu 12","table":16,"tutor":"Carly"},{"id":"50296291","first":"Charlotte","last":"Prokuda","workshop":"Thu 12","table":17,"tutor":"Samuel"},{"id":"50270871","first":"Jemimah","last":"Rego","workshop":"Thu 12","table":18,"tutor":"Samuel"},{"id":"49948286","first":"Samantha Nicole","last":"Reyes","workshop":"Thu 12","table":19,"tutor":"Samuel"},{"id":"50272268","first":"Aliah","last":"Rigo","workshop":"Thu 12","table":20,"tutor":"Samuel"},{"id":"50298884","first":"Isabella","last":"Robinson","workshop":"Thu 12","table":21,"tutor":"Samuel, Samantha"},{"id":"50357099","first":"Kate","last":"Rockett","workshop":"Thu 12","table":22,"tutor":"Samantha"},{"id":"50375299","first":"Fletcher","last":"Roles","workshop":"Thu 12","table":23,"tutor":"Samantha"},{"id":"49624553","first":"Eliad","last":"Rout","workshop":"Thu 12","table":24,"tutor":"Samantha"},{"id":"50303283","first":"Aisa","last":"Sakuragawa","workshop":"Thu 12","table":25,"tutor":"Samantha"},{"id":"50269709","first":"Evie","last":"Sargent","workshop":"Thu 12","table":1,"tutor":"Sarah"},{"id":"50057746","first":"Charlotte","last":"Saw","workshop":"Thu 12","table":2,"tutor":"Sarah"},{"id":"50343216","first":"Adeline","last":"Shaw","workshop":"Thu 12","table":3,"tutor":"Sarah"},{"id":"50293638","first":"Leila","last":"Sheiles","workshop":"Thu 12","table":4,"tutor":"Sarah"},{"id":"49992092","first":"Hannah","last":"Shelburn","workshop":"Thu 12","table":5,"tutor":"Raveen"},{"id":"50282427","first":"Jassie","last":"Singh","workshop":"Thu 12","table":6,"tutor":"Raveen"},{"id":"49636873","first":"Leon","last":"Skerritt","workshop":"Thu 12","table":7,"tutor":"Raveen"},{"id":"50266397","first":"Sarah-Jane","last":"Smith","workshop":"Thu 12","table":8,"tutor":"Raveen"},{"id":"50304217","first":"Sophie","last":"Spiclin","workshop":"Thu 12","table":9,"tutor":"Henrik"},{"id":"50344307","first":"Sophia","last":"Stacey","workshop":"Thu 12","table":10,"tutor":"Henrik"},{"id":"49634776","first":"Meg","last":"Stapleton","workshop":"Thu 12","table":11,"tutor":"Henrik"},{"id":"49691126","first":"Sophia","last":"Stone","workshop":"Thu 12","table":12,"tutor":"Henrik"},{"id":"50350513","first":"Abby","last":"Sun","workshop":"Thu 12","table":null,"tutor":""},{"id":"50345395","first":"Hannah","last":"Sun","workshop":"Thu 12","table":13,"tutor":"Carly"},{"id":"50347081","first":"Charlotte","last":"Thomas","workshop":"Thu 12","table":14,"tutor":"Carly"},{"id":"50088263","first":"Lysoceane","last":"Tjohoredjo","workshop":"Thu 12","table":15,"tutor":"Carly"},{"id":"50312016","first":"Ellouise","last":"Tkaczyk","workshop":"Thu 12","table":null,"tutor":""},{"id":"49732298","first":"Wing Sum Christie","last":"Tong","workshop":"Thu 12","table":16,"tutor":"Carly"},{"id":"50352254","first":"Kevin","last":"Trieu","workshop":"Thu 12","table":17,"tutor":"Samuel"},{"id":"48911911","first":"Tahlia","last":"Turner","workshop":"Thu 12","table":18,"tutor":"Samuel"},{"id":"50363027","first":"Shriya","last":"Umesh","workshop":"Thu 12","table":19,"tutor":"Samuel"},{"id":"50375280","first":"Sophia","last":"Venardos","workshop":"Thu 12","table":20,"tutor":"Samuel"},{"id":"50350773","first":"Dylan","last":"Vickers","workshop":"Thu 12","table":null,"tutor":""},{"id":"49733101","first":"Zilu","last":"Wang","workshop":"Thu 12","table":21,"tutor":"Samuel, Samantha"},{"id":"50368059","first":"Sophia","last":"White","workshop":"Thu 12","table":22,"tutor":"Samantha"},{"id":"47821022","first":"Pone NA Me Shun Lai","last":"Win","workshop":"Thu 12","table":24,"tutor":"Samantha"},{"id":"49465046","first":"Mengke","last":"Ye","workshop":"Thu 12","table":25,"tutor":"Samantha"},{"id":"49867079","first":"Tze Yi","last":"Young","workshop":"Thu 12","table":null,"tutor":""},{"id":"50118898","first":"Alina","last":"Zeissink","workshop":"Thu 12","table":null,"tutor":""},{"id":"50345407","first":"Isabella","last":"Zhai","workshop":"Thu 12","table":null,"tutor":""},{"id":"50356140","first":"Jojo","last":"Zheng","workshop":"Thu 12","table":7,"tutor":"Raveen"},{"id":"49595055","first":"Leyan","last":"Zhou","workshop":"Thu 12","table":null,"tutor":""},{"id":"49527588","first":"Shuyi","last":"Zhou","workshop":"Thu 12","table":null,"tutor":""},{"id":"49960895","first":"Quan","last":"Zou","workshop":"Thu 12","table":null,"tutor":""},{"id":"50274963","first":"Leylah","last":"Zubair","workshop":"Thu 12","table":null,"tutor":""},{"id":"50290365","first":"Nuray","last":"Akova","workshop":"Thu 2","table":null,"tutor":""},{"id":"50362178","first":"Abigail","last":"Anderson","workshop":"Thu 2","table":null,"tutor":""},{"id":"49712889","first":"Atticus","last":"Armstrong","workshop":"Thu 2","table":2,"tutor":"Samantha"},{"id":"49886294","first":"Lauren","last":"Bailey","workshop":"Thu 2","table":3,"tutor":"Samantha"},{"id":"49232350","first":"Maisy","last":"Bartley","workshop":"Thu 2","table":4,"tutor":"Samantha"},{"id":"50372010","first":"Zoe","last":"Bassingthwaighte","workshop":"Thu 2","table":5,"tutor":"Henrik"},{"id":"49530823","first":"Jaali","last":"Baynes","workshop":"Thu 2","table":6,"tutor":"Henrik"},{"id":"50373174","first":"Lara","last":"Bemet","workshop":"Thu 2","table":7,"tutor":"Henrik"},{"id":"50285736","first":"Timothy","last":"Bennett","workshop":"Thu 2","table":8,"tutor":"Henrik"},{"id":"48045759","first":"Lyka","last":"Bowser","workshop":"Thu 2","table":9,"tutor":"Sarah"},{"id":"49198308","first":"Caitlin","last":"Brown","workshop":"Thu 2","table":null,"tutor":""},{"id":"49640713","first":"Claudia","last":"Brown","workshop":"Thu 2","table":11,"tutor":"Sarah"},{"id":"48908751","first":"Sam","last":"Brown","workshop":"Thu 2","table":10,"tutor":"Sarah"},{"id":"49602140","first":"Leila","last":"Bryceson","workshop":"Thu 2","table":12,"tutor":"Sarah"},{"id":"50345304","first":"Georgia","last":"Burbank","workshop":"Thu 2","table":13,"tutor":"Samuel"},{"id":"49698376","first":"Benjamin","last":"Burgess","workshop":"Thu 2","table":14,"tutor":"Samuel"},{"id":"49624722","first":"Matthew","last":"Burgess-Limerick","workshop":"Thu 2","table":15,"tutor":"Samuel"},{"id":"50350960","first":"Georgia","last":"Butler","workshop":"Thu 2","table":16,"tutor":"Samuel"},{"id":"50296237","first":"Matilda","last":"Buttini","workshop":"Thu 2","table":17,"tutor":"Carly"},{"id":"48036766","first":"Takeyoshi","last":"Byrom","workshop":"Thu 2","table":18,"tutor":"Carly"},{"id":"46058474","first":"Ruichao","last":"Cai","workshop":"Thu 2","table":19,"tutor":"Carly"},{"id":"46616128","first":"Mei-Ling","last":"Carpenter","workshop":"Thu 2","table":20,"tutor":"Carly"},{"id":"50237472","first":"Eric","last":"Cashman","workshop":"Thu 2","table":21,"tutor":"Carly, Raveen"},{"id":"49614572","first":"Noah","last":"Chan Padilla","workshop":"Thu 2","table":22,"tutor":"Raveen"},{"id":"46631242","first":"Lung-Hsin","last":"Chang","workshop":"Thu 2","table":23,"tutor":"Raveen"},{"id":"49172595","first":"Xavier","last":"Chen","workshop":"Thu 2","table":25,"tutor":"Raveen"},{"id":"48816539","first":"Yunran","last":"Chen","workshop":"Thu 2","table":24,"tutor":"Raveen"},{"id":"49939677","first":"Minh Khue","last":"Chu","workshop":"Thu 2","table":1,"tutor":"Samantha"},{"id":"49661978","first":"Zi Qi","last":"Chui","workshop":"Thu 2","table":null,"tutor":""},{"id":"50284917","first":"Caitlin","last":"Curtis","workshop":"Thu 2","table":2,"tutor":"Samantha"},{"id":"50155709","first":"Siti Anisah","last":"Daulay","workshop":"Thu 2","table":3,"tutor":"Samantha"},{"id":"48499736","first":"Ashleigh","last":"Docherty","workshop":"Thu 2","table":4,"tutor":"Samantha"},{"id":"49519266","first":"Harrison","last":"Du","workshop":"Thu 2","table":5,"tutor":"Henrik"},{"id":"49642379","first":"Sally","last":"Earnshaw","workshop":"Thu 2","table":6,"tutor":"Henrik"},{"id":"50390957","first":"James","last":"Edwards","workshop":"Thu 2","table":7,"tutor":"Henrik"},{"id":"50351426","first":"Bailey","last":"Ekeroma-Tafa","workshop":"Thu 2","table":8,"tutor":"Henrik"},{"id":"49250493","first":"Matthew","last":"Evans","workshop":"Thu 2","table":9,"tutor":"Sarah"},{"id":"50155697","first":"Desrina","last":"Fakhira","workshop":"Thu 2","table":10,"tutor":"Sarah"},{"id":"49887303","first":"Molly","last":"Ferguson","workshop":"Thu 2","table":11,"tutor":"Sarah"},{"id":"50303238","first":"Angela","last":"Gao","workshop":"Thu 2","table":null,"tutor":""},{"id":"49598775","first":"Shanqingyun","last":"Gao","workshop":"Thu 2","table":14,"tutor":"Samuel"},{"id":"49543597","first":"Yinuo","last":"Gao","workshop":"Thu 2","table":13,"tutor":"Samuel"},{"id":"50312717","first":"Sarah","last":"Gates","workshop":"Thu 2","table":15,"tutor":"Samuel"},{"id":"49760376","first":"Martha Therese","last":"Gerella","workshop":"Thu 2","table":null,"tutor":""},{"id":"50352085","first":"Nico","last":"Gonzales","workshop":"Thu 2","table":17,"tutor":"Carly"},{"id":"49610480","first":"Maisie","last":"Green","workshop":"Thu 2","table":18,"tutor":"Carly"},{"id":"49203743","first":"Victoria","last":"Hamerli","workshop":"Thu 2","table":null,"tutor":""},{"id":"49224430","first":"Kenza","last":"Hammadache","workshop":"Thu 2","table":19,"tutor":"Carly"},{"id":"49842982","first":"Zhuoya","last":"He","workshop":"Thu 2","table":null,"tutor":""},{"id":"50160105","first":"Edie","last":"Hilliard","workshop":"Thu 2","table":22,"tutor":"Raveen"},{"id":"49716636","first":"Yunseo","last":"Hong","workshop":"Thu 2","table":23,"tutor":"Raveen"},{"id":"49300745","first":"Shihan","last":"Hu","workshop":"Thu 2","table":24,"tutor":"Raveen"},{"id":"49999578","first":"Jialin","last":"Huang","workshop":"Thu 2","table":25,"tutor":"Raveen"},{"id":"50017106","first":"Lanxi","last":"Huang","workshop":"Thu 2","table":1,"tutor":"Samantha"},{"id":"49887095","first":"Violet","last":"Hudson","workshop":"Thu 2","table":2,"tutor":"Samantha"},{"id":"50389504","first":"Nafisa","last":"Husna","workshop":"Thu 2","table":3,"tutor":"Samantha"},{"id":"49886838","first":"Stella","last":"Jaatinen","workshop":"Thu 2","table":4,"tutor":"Samantha"},{"id":"50269736","first":"Annika","last":"Jensen","workshop":"Thu 2","table":6,"tutor":"Henrik"},{"id":"49707979","first":"Sophia","last":"Ji","workshop":"Thu 2","table":7,"tutor":"Henrik"},{"id":"49508215","first":"Kexin","last":"Jing","workshop":"Thu 2","table":8,"tutor":"Henrik"},{"id":"48242286","first":"Kay","last":"Juma","workshop":"Thu 2","table":9,"tutor":"Sarah"},{"id":"50349870","first":"Baani","last":"Kang","workshop":"Thu 2","table":11,"tutor":"Sarah"},{"id":"50308073","first":"Saharhat","last":"Kawlpawong","workshop":"Thu 2","table":12,"tutor":"Sarah"},{"id":"49698723","first":"Mia","last":"Kerr","workshop":"Thu 2","table":13,"tutor":"Samuel"},{"id":"50272455","first":"Pranay","last":"Khatri","workshop":"Thu 2","table":14,"tutor":"Samuel"},{"id":"50297346","first":"Ruby","last":"Laverty","workshop":"Thu 2","table":15,"tutor":"Samuel"},{"id":"49908178","first":"Anne","last":"Le","workshop":"Thu 2","table":16,"tutor":"Samuel"},{"id":"49749157","first":"Ping-En","last":"Lee","workshop":"Thu 2","table":17,"tutor":"Carly"},{"id":"47171325","first":"Caitlin","last":"Lewis","workshop":"Thu 2","table":19,"tutor":"Carly"},{"id":"49849981","first":"Xingyu","last":"Li","workshop":"Thu 2","table":20,"tutor":"Carly"},{"id":"49508804","first":"Wendy","last":"Liang","workshop":"Thu 2","table":21,"tutor":"Carly, Raveen"},{"id":"49663329","first":"Junxi","last":"Liu","workshop":"Thu 2","table":23,"tutor":"Raveen"},{"id":"49939994","first":"Yuxuan","last":"Liu","workshop":"Thu 2","table":24,"tutor":"Raveen"},{"id":"49549834","first":"Zhuo","last":"Liu","workshop":"Thu 2","table":22,"tutor":"Raveen"},{"id":"50309557","first":"Sayre","last":"Lotstutter","workshop":"Thu 2","table":25,"tutor":"Raveen"},{"id":"50269679","first":"Joshua","last":"Lowrey","workshop":"Thu 2","table":1,"tutor":"Samantha"},{"id":"47043002","first":"Grace","last":"Mahony","workshop":"Thu 2","table":3,"tutor":"Samantha"},{"id":"50300796","first":"Joy","last":"Mahoro","workshop":"Thu 2","table":4,"tutor":"Samantha"},{"id":"50370481","first":"Hayley","last":"Maller","workshop":"Thu 2","table":5,"tutor":"Henrik"},{"id":"50349384","first":"Nirmaljit","last":"Mangat","workshop":"Thu 2","table":6,"tutor":"Henrik"},{"id":"49379693","first":"Guyu","last":"Mao","workshop":"Thu 2","table":7,"tutor":"Henrik"},{"id":"48096724","first":"Joshua","last":"Martin","workshop":"Thu 2","table":8,"tutor":"Henrik"},{"id":"50309025","first":"Eadie","last":"McWilliam","workshop":"Thu 2","table":9,"tutor":"Sarah"},{"id":"50242346","first":"Shriyaa","last":"Mishra","workshop":"Thu 2","table":10,"tutor":"Sarah"},{"id":"50282324","first":"Phoebe","last":"Moreline","workshop":"Thu 2","table":11,"tutor":"Sarah"},{"id":"50287310","first":"Zoe","last":"Naylor","workshop":"Thu 2","table":13,"tutor":"Samuel"},{"id":"50367070","first":"Ynez","last":"Ng","workshop":"Thu 2","table":14,"tutor":"Samuel"},{"id":"50289921","first":"Holly","last":"O'Shea","workshop":"Thu 2","table":17,"tutor":"Carly"},{"id":"50267705","first":"Sasha","last":"O'Sullivan","workshop":"Thu 2","table":18,"tutor":"Carly"},{"id":"33214467","first":"Nishantha","last":"Palliyaguru","workshop":"Thu 2","table":19,"tutor":"Carly"},{"id":"49876316","first":"Paras","last":"Paras","workshop":"Thu 2","table":20,"tutor":"Carly"},{"id":"49698590","first":"Mollie","last":"Parer","workshop":"Thu 2","table":null,"tutor":""},{"id":"50361238","first":"Paisley","last":"Parkinson","workshop":"Thu 2","table":21,"tutor":"Carly, Raveen"},{"id":"49631391","first":"Alexander","last":"Pillay","workshop":"Thu 2","table":22,"tutor":"Raveen"},{"id":"50294121","first":"Angelina","last":"Price","workshop":"Thu 2","table":23,"tutor":"Raveen"},{"id":"48828710","first":"Pari","last":"Ravula","workshop":"Thu 2","table":24,"tutor":"Raveen"},{"id":"50093306","first":"Bojian","last":"Ren","workshop":"Thu 2","table":25,"tutor":"Raveen"},{"id":"50173945","first":"Nina","last":"Ren","workshop":"Thu 2","table":1,"tutor":"Samantha"},{"id":"49399329","first":"Ally-mia","last":"Roden","workshop":"Thu 2","table":2,"tutor":"Samantha"},{"id":"50374809","first":"Patrick","last":"Sampieri","workshop":"Thu 2","table":3,"tutor":"Samantha"},{"id":"50118768","first":"Samuel","last":"Savill","workshop":"Thu 2","table":4,"tutor":"Samantha"},{"id":"49605842","first":"Maclyn","last":"Scarborough","workshop":"Thu 2","table":5,"tutor":"Henrik"},{"id":"50271515","first":"Mia","last":"Shefi","workshop":"Thu 2","table":null,"tutor":""},{"id":"50352786","first":"Gabriel","last":"Shirley","workshop":"Thu 2","table":6,"tutor":"Henrik"},{"id":"49609550","first":"Kayla","last":"Siltala","workshop":"Thu 2","table":7,"tutor":"Henrik"},{"id":"49616240","first":"Lauren","last":"Skillender","workshop":"Thu 2","table":8,"tutor":"Henrik"},{"id":"50361247","first":"Ana","last":"Skorzewski","workshop":"Thu 2","table":9,"tutor":"Sarah"},{"id":"50312070","first":"Hayku","last":"Soe","workshop":"Thu 2","table":11,"tutor":"Sarah"},{"id":"49925933","first":"Rebecca Ferren","last":"Soetarso","workshop":"Thu 2","table":12,"tutor":"Sarah"},{"id":"49618057","first":"Hugo","last":"Stapleton","workshop":"Thu 2","table":13,"tutor":"Samuel"},{"id":"49686476","first":"Evie","last":"Steinhauer","workshop":"Thu 2","table":14,"tutor":"Samuel"},{"id":"49711163","first":"Simran","last":"Sunner","workshop":"Thu 2","table":16,"tutor":"Samuel"},{"id":"49414884","first":"Jiayi","last":"Tang","workshop":"Thu 2","table":17,"tutor":"Carly"},{"id":"49207116","first":"Mareya","last":"Tapper","workshop":"Thu 2","table":18,"tutor":"Carly"},{"id":"50351930","first":"Isabella","last":"Toms","workshop":"Thu 2","table":20,"tutor":"Carly"},{"id":"46986027","first":"Jarrah","last":"Toussaint","workshop":"Thu 2","table":21,"tutor":"Carly, Raveen"},{"id":"50044009","first":"Leanne","last":"Truong","workshop":"Thu 2","table":22,"tutor":"Raveen"},{"id":"50407015","first":"Lukah","last":"Vallance","workshop":"Thu 2","table":23,"tutor":"Raveen"},{"id":"49615449","first":"Kartheeka","last":"Valluri","workshop":"Thu 2","table":24,"tutor":"Raveen"},{"id":"49753659","first":"Arje","last":"Van Der Walle","workshop":"Thu 2","table":25,"tutor":"Raveen"},{"id":"49719039","first":"Marilise","last":"Visser","workshop":"Thu 2","table":1,"tutor":"Samantha"},{"id":"49735851","first":"Fuying","last":"Wang","workshop":"Thu 2","table":5,"tutor":"Henrik"},{"id":"48246994","first":"Yi","last":"Wang","workshop":"Thu 2","table":3,"tutor":"Samantha"},{"id":"49668128","first":"Yuecheng","last":"Wang","workshop":"Thu 2","table":4,"tutor":"Samantha"},{"id":"50209095","first":"Zichen","last":"Wang","workshop":"Thu 2","table":6,"tutor":"Henrik"},{"id":"50363205","first":"Charlotte","last":"Ward","workshop":"Thu 2","table":7,"tutor":"Henrik"},{"id":"49886333","first":"Seaena","last":"Watson","workshop":"Thu 2","table":8,"tutor":"Henrik"},{"id":"49631720","first":"Emma","last":"White","workshop":"Thu 2","table":9,"tutor":"Sarah"},{"id":"50371602","first":"Annabelle","last":"Wilson","workshop":"Thu 2","table":10,"tutor":"Sarah"},{"id":"50303667","first":"Kayley","last":"Wong","workshop":"Thu 2","table":null,"tutor":""},{"id":"50347111","first":"Noah","last":"Woolley","workshop":"Thu 2","table":11,"tutor":"Sarah"},{"id":"50365889","first":"Lewis","last":"Wu","workshop":"Thu 2","table":12,"tutor":"Sarah"},{"id":"49771596","first":"Jeffrey","last":"Xie","workshop":"Thu 2","table":13,"tutor":"Samuel"},{"id":"49554052","first":"Meitong","last":"Yan","workshop":"Thu 2","table":14,"tutor":"Samuel"},{"id":"49457939","first":"Eliza","last":"Yarrow","workshop":"Thu 2","table":16,"tutor":"Samuel"},{"id":"49835760","first":"Hailey","last":"Yi","workshop":"Thu 2","table":17,"tutor":"Carly"},{"id":"49409040","first":"Ivan","last":"Zhang","workshop":"Thu 2","table":21,"tutor":"Carly, Raveen"},{"id":"48956220","first":"Jia","last":"Zhang","workshop":"Thu 2","table":20,"tutor":"Carly"},{"id":"49705993","first":"Joy","last":"Zhang","workshop":"Thu 2","table":22,"tutor":"Raveen"},{"id":"50133798","first":"Rongruo","last":"Zhang","workshop":"Thu 2","table":24,"tutor":"Raveen"},{"id":"48073369","first":"Wenmo","last":"Zhang","workshop":"Thu 2","table":19,"tutor":"Carly"},{"id":"49844717","first":"Zhekai","last":"Zhang","workshop":"Thu 2","table":23,"tutor":"Raveen"},{"id":"48519979","first":"Xiaoxi","last":"Zhao","workshop":"Thu 2","table":25,"tutor":"Raveen"},{"id":"50155987","first":"Chloe","last":"Zhong","workshop":"Thu 2","table":null,"tutor":""},{"id":"49462344","first":"Zihan","last":"Zhuang","workshop":"Thu 2","table":null,"tutor":""}];
+
+// ── STATE ────────────────────────────────────────
+let data = [], sc = "last", sa = true, stmr = null, me = null, synced = null;
+
+// ── INIT ─────────────────────────────────────────
+async function init() {
+
+  me = localStorage.getItem("p1040_me");
+  if (me) updateChip(me); else showUserOverlay();
+  await load();
+  setInterval(bgRefresh, 60000);
+}
+
+// ── LOAD / SAVE ──────────────────────────────────
+async function load() {
+  // Always show data immediately - never hang on loading screen
+  data = [...SEED];
+  render();
+  setSyncing("saving","Syncing…");
+  // 10-second timeout so a dead network fails fast
+  const ctrl = new AbortController();
+  const tid = setTimeout(function(){ ctrl.abort(); }, 10000);
+  try {
+    const r = await fetch(API, {headers:{Accept:"application/json"}, signal:ctrl.signal});
+    clearTimeout(tid);
+    if (!r.ok) throw Error(r.status);
+    const j = await r.json();
+    if (j.students) { data = j.students; render(); }
+    synced = new Date();
+    setSyncing("saved","Synced " + ago(synced));
+  } catch(e) {
+    clearTimeout(tid);
+    console.warn("Sync:", e.message);
+    if (!synced) {
+      setSyncing("saving","Uploading initial data…");
+      await push("Initial load from Excel");
+    } else {
+      setSyncing("error","Offline — local data only");
+    }
+  }
+}
+
+async function bgRefresh() {
+  try {
+    const r = await fetch(API, {headers:{Accept:"application/json"}});
+    if (!r.ok) return;
+    const j = await r.json();
+    data = j.students || data;
+    synced = new Date();
+    setSyncing("saved","Synced " + ago(synced));
+    render();
+  } catch(e){}
+}
+
+async function refreshData() { setSyncing("saving","Refreshing…"); await load(); toast("✓ Refreshed"); }
+
+async function push(note) {
+  setSyncing("saving","Saving…");
+  try {
+    const r = await fetch(API, {method:"PUT", headers:{"Content-Type":"application/json",Accept:"application/json"},
+      body:JSON.stringify({students:data, by:me||"?", at:new Date().toISOString(), note:note||""})});
+    if (!r.ok) throw Error(r.status);
+    synced = new Date();
+    setSyncing("saved","Saved by " + (me||"you"));
+  } catch(e) {
+    setSyncing("error","Save failed");
+    toast("⚠ Save failed: " + e.message);
+  }
+}
+
+function defer(note) {
+  clearTimeout(stmr);
+  setSyncing("saving","Unsaved…");
+  stmr = setTimeout(() => push(note), 900);
+}
+
+// ── CHANGE HANDLERS ──────────────────────────────
+function chgWS(i, ws) {
+  const s = data[i], old = s.workshop;
+  s.workshop = ws;
+  s.tutor = (s.table && TT[ws]) ? (TT[ws][s.table]||"") : "";
+  defer(s.last + " → " + ws);
+  render();
+}
+
+function chgTbl(i, tv) {
+  const s = data[i];
+  s.table = tv ? parseInt(tv) : null;
+  s.tutor = (s.table && TT[s.workshop]) ? (TT[s.workshop][s.table]||"") : "";
+  defer(s.last + " table " + (s.table||"—"));
+  // flash tutor cell
+  setTimeout(() => {
+    const row = document.querySelector("tr[data-i='" + i + "']");
+    if (row) { const tc = row.querySelector(".tc2"); if (tc) { tc.classList.remove("flash"); void tc.offsetWidth; tc.classList.add("flash"); } }
+  }, 30);
+  render();
+}
+
+// ── RENDER ────────────────────────────────────────
+function go() {
+  const q  = document.getElementById("q").value.trim().toLowerCase();
+  const fw = document.getElementById("f-ws").value;
+  const ft = document.getElementById("f-tutor").value.toLowerCase();
+  const fs = document.getElementById("f-st").value;
+
+  let rows = data.map((s,i) => Object.assign({},s,{_i:i}));
+  if (q)  rows = rows.filter(s => s.last.toLowerCase().includes(q)||s.first.toLowerCase().includes(q)||s.id.includes(q));
+  if (fw) rows = rows.filter(s => s.workshop===fw);
+  if (ft) rows = rows.filter(s => s.tutor.toLowerCase().includes(ft));
+  if (fs==="a") rows = rows.filter(s => s.table);
+  if (fs==="u") rows = rows.filter(s => !s.table);
+
+  rows.sort((a,b)=>{
+    let av=a[sc], bv=b[sc];
+    if (av===null||av===undefined) av=-1;
+    if (bv===null||bv===undefined) bv=-1;
+    if (typeof av==="string") av=av.toLowerCase();
+    if (typeof bv==="string") bv=bv.toLowerCase();
+    return av<bv?(sa?-1:1):av>bv?(sa?1:-1):0;
+  });
+
+  const tb = document.getElementById("tb");
+  const empty = document.getElementById("empty");
+
+  if (!rows.length) {
+    document.getElementById("tbl").style.display="none";
+    empty.style.display="";
+    document.getElementById("rc").textContent="No results";
+    return;
+  }
+
+  document.getElementById("tbl").style.display="";
+  empty.style.display="none";
+  document.getElementById("rc").textContent = rows.length===data.length
+    ? rows.length + " students"
+    : "Showing " + rows.length + " of " + data.length;
+
+  tb.innerHTML = rows.map(s => {
+    const wsc = s.workshop==="Tues 8am"?"ws-tue":s.workshop==="Thu 12"?"ws-t12":"ws-t2";
+    const wsl = s.workshop==="Thu 12"?"Thu 12pm":s.workshop==="Thu 2"?"Thu 2pm":s.workshop;
+    const wso = ["Tues 8am","Thu 12","Thu 2"].map(w =>
+      `<option value="${w}"${s.workshop===w?" selected":""}>${w==="Thu 12"?"Thu 12pm":w==="Thu 2"?"Thu 2pm":w}</option>`).join("");
+    const tbo = `<option value=""${!s.table?" selected":""}>— unassigned —</option>` +
+      Array.from({length:25},(_,i)=>i+1).map(n=>`<option value="${n}"${s.table===n?" selected":""}>${n}</option>`).join("");
+    const tuth = tutorBadge(s.tutor);
+
+    return `<tr data-i="${s._i}"${!s.table?' class="una"':''}>
+      <td class="cid">${s.id}</td>
+      <td class="cname"><strong>${s.last}</strong>, ${s.first}</td>
+      <td class="cws"><select class="cs" onchange="chgWS(${s._i},this.value)">${wso}</select></td>
+      <td class="ctbl"><select class="cs" onchange="chgTbl(${s._i},this.value)">${tbo}</select></td>
+      <td class="ctut tc2">${tuth}</td>
+    </tr>`;
+  }).join("");
+}
+
+function tutorBadge(t) {
+  if (!t) return '<span class="tn">Unassigned</span>';
+  if (t.includes(",")) return `<span class="tb tsh"><span class="td"></span>${t}</span>`;
+  const lc = t.toLowerCase();
+  const cls = lc.includes("carly")?"tc":lc.includes("henrik")?"th":lc.includes("raveen")?"tr":lc.includes("samantha")?"tsa":lc.includes("samuel")?"tsu":lc.includes("sarah")?"tsr":"tsh";
+  return `<span class="tb ${cls}"><span class="td"></span>${t}</span>`;
+}
+
+function render() {
+  const tot=data.length, una=data.filter(s=>!s.table).length,
+        tue=data.filter(s=>s.workshop==="Tues 8am").length,
+        t12=data.filter(s=>s.workshop==="Thu 12").length,
+        t2 =data.filter(s=>s.workshop==="Thu 2").length;
+  document.getElementById("s-tot").textContent=tot;
+  document.getElementById("s-una").textContent=una;
+  document.getElementById("s-tue").textContent=tue;
+  document.getElementById("s-t12").textContent=t12;
+  document.getElementById("s-t2").textContent=t2;
+  document.getElementById("loading").style.display="none";
+  go();
+}
+
+// ── SORT ─────────────────────────────────────────
+function srt(c) {
+  sa = sc===c ? !sa : true; sc = c;
+  ["id","last","workshop","table","tutor"].forEach(x => {
+    const el = document.getElementById("arr-"+x);
+    if (el) el.textContent = x===c ? (sa?"↑":"↓") : "↕";
+    const th = document.querySelector(`th[data-c="${x}"]`);
+    if (th) th.classList.toggle("sorted", x===c);
+  });
+  go();
+}
+
+// ── USER ─────────────────────────────────────────
+function showUserOverlay() { document.getElementById("user-overlay").classList.remove("hidden"); }
+function setUser(n) { me=n; localStorage.setItem("p1040_me",n); document.getElementById("user-overlay").classList.add("hidden"); updateChip(n); load(); }
+function changeUser() { showUserOverlay(); }
+function updateChip(n) { document.getElementById("uname").textContent=n; document.getElementById("uav").textContent=n[0]; }
+
+// ── HELPERS ──────────────────────────────────────
+function setSyncing(cls,txt){ const el=document.getElementById("sync"); el.className="sync "+cls; document.getElementById("sync-txt").textContent=txt; }
+function ago(d){ if(!d) return ""; const s=Math.floor((new Date()-d)/1000); if(s<10) return "just now"; if(s<60) return s+"s ago"; if(s<3600) return Math.floor(s/60)+"m ago"; return Math.floor(s/3600)+"h ago"; }
+let ttmr;
+function toast(m){ const el=document.getElementById("toast"); el.textContent=m; el.classList.add("show"); clearTimeout(ttmr); ttmr=setTimeout(()=>el.classList.remove("show"),3200); }
+
+init();
+</script>
+</body>
+</html>
