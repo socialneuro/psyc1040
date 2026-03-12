@@ -20,6 +20,30 @@
 }
 body{font-family:"Inter",sans-serif;background:var(--bg);color:var(--text);font-size:14px;min-height:100vh}
 
+/* SETUP */
+#setup-overlay{position:fixed;inset:0;background:rgba(15,20,30,.78);z-index:1000;display:flex;align-items:center;justify-content:center;padding:24px}
+#setup-overlay.hidden{display:none}
+.sc{background:var(--surface);border-radius:16px;padding:40px;max-width:580px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.28)}
+.sc h1{font-size:22px;font-weight:700;margin-bottom:4px}
+.sc .sub{color:var(--muted);font-size:13px;margin-bottom:28px}
+.step{display:flex;gap:16px;margin-bottom:22px}
+.step-n{width:32px;height:32px;border-radius:50%;background:var(--accent);color:#fff;font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.step-b{flex:1}
+.step-b strong{display:block;margin-bottom:4px}
+.step-b p{color:var(--muted);font-size:13px;line-height:1.6}
+.step-b a{color:var(--accent);text-decoration:none;font-weight:500}
+.sir{display:flex;gap:8px;margin-top:10px}
+.si{flex:1;padding:9px 12px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:monospace;outline:none;transition:border-color .15s}
+.si:focus{border-color:var(--accent)}
+.btn{padding:9px 18px;border-radius:var(--r);border:none;cursor:pointer;font-size:13px;font-weight:600;font-family:"Inter",sans-serif;transition:all .15s;white-space:nowrap}
+.btn-p{background:var(--accent);color:#fff}
+.btn-p:hover{background:#3451d1}
+.btn-s{background:var(--bg);color:var(--text);border:1.5px solid var(--border)}
+.btn-s:hover{background:var(--border)}
+.btn-sm{padding:6px 12px;font-size:12px}
+.codebox{background:#1e1e2e;color:#cdd6f4;border-radius:var(--r);padding:12px;font-size:11px;font-family:monospace;max-height:72px;overflow:hidden;margin-top:8px;line-height:1.4}
+.se{color:var(--err);font-size:12px;margin-top:6px;display:none}
+
 /* USER OVERLAY */
 #user-overlay{position:fixed;inset:0;background:rgba(15,20,30,.78);z-index:999;display:flex;align-items:center;justify-content:center;padding:24px}
 #user-overlay.hidden{display:none}
@@ -113,7 +137,50 @@ tr.una:hover td{background:#fffbeb}
 </head>
 <body>
 
+<!-- SETUP OVERLAY -->
+<div id="setup-overlay" class="hidden">
+<div class="sc">
+  <h1>&#128196; First-time Setup</h1>
+  <p class="sub">Create a shared cloud store so all 7 tutors read and write the same data. Takes about 2 minutes.</p>
 
+  <div class="step">
+    <div class="step-n">1</div>
+    <div class="step-b">
+      <strong>Copy the pre-loaded student data</strong>
+      <p>Click below to copy all 456 students to your clipboard.</p>
+      <div class="codebox" id="data-preview">Loading&hellip;</div>
+      <button class="btn btn-s btn-sm" style="margin-top:8px" onclick="copyData()">&#128203;&nbsp;Copy JSON data</button>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-n">2</div>
+    <div class="step-b">
+      <strong>Create a free blob at JSONblob.com</strong>
+      <p>
+        Open <a href="https://jsonblob.com" target="_blank">jsonblob.com</a> &rarr; click
+        <strong>New JSON Blob</strong> &rarr; select all text in the editor (Ctrl+A) &rarr;
+        paste your copied data &rarr; click <strong>Save</strong>.<br>
+        The URL will change to something like
+        <code style="background:#f0f2f5;padding:1px 5px;border-radius:4px;font-size:11px">jsonblob.com/1234567890123456789</code>.
+        Copy that long number &mdash; that's your Blob ID.
+      </p>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-n">3</div>
+    <div class="step-b">
+      <strong>Enter the Blob ID &amp; download your configured file</strong>
+      <p>Paste the ID below, then download the ready-to-share file.</p>
+      <div class="sir">
+        <input id="bid" class="si" placeholder="e.g. 1234567890123456789" oninput="document.getElementById('se').style.display='none'">
+        <button class="btn btn-p" onclick="dlConfigured()">&#11015;&nbsp;Download configured file</button>
+      </div>
+      <div class="se" id="se">Please enter a valid Blob ID (the number from the URL).</div>
+      <div id="dl-fallback" style="display:none;margin-top:10px;font-size:13px;color:var(--muted)"></div>
+    </div>
+  </div>
 </div>
 </div>
 
@@ -229,8 +296,10 @@ tr.una:hover td{background:#fffbeb}
 
 <script>
 // ── CONFIG ──────────────────────────────────────
-const BLOB_ID = "019cdf50-cf59-7482-94aa-cb735c11c579";
-const API = "https://jsonblob.com/api/jsonBlob/" + BLOB_ID;
+const JSONBIN_KEY = "$2a$10$p./gzQof4WRav7HD0jcoq.3DbShNWjc5uAzhiBVKYDCTpVYGadws.";
+const JSONBIN_BIN = "ENTER_BIN_ID_HERE";
+function READ_API()  { return "https://api.jsonbin.io/v3/b/" + activeBin() + "/latest"; }
+function WRITE_API() { return "https://api.jsonbin.io/v3/b/" + activeBin(); }
 
 // ── TABLE→TUTOR MAP ─────────────────────────────
 const TT = {
@@ -247,28 +316,62 @@ let data = [], sc = "last", sa = true, stmr = null, me = null, synced = null;
 
 // ── INIT ─────────────────────────────────────────
 async function init() {
-
   me = localStorage.getItem("p1040_me");
   if (me) updateChip(me); else showUserOverlay();
-  await load();
-  setInterval(bgRefresh, 60000);
+  if (JSONBIN_BIN === "ENTER_BIN_ID_HERE") {
+    await createBin();
+  } else {
+    await load();
+    setInterval(bgRefresh, 60000);
+  }
+}
+
+async function createBin() {
+  data = [...SEED];
+  render();
+  setSyncing("saving", "Creating shared storage…");
+  try {
+    const r = await fetch("https://api.jsonbin.io/v3/b", {
+      method: "POST",
+      headers: {"X-Master-Key": JSONBIN_KEY, "Content-Type": "application/json", "X-Bin-Name": "PSYC1040"},
+      body: JSON.stringify({students: data, by: "setup", at: new Date().toISOString()})
+    });
+    if (!r.ok) throw Error(r.status);
+    const j = await r.json();
+    const binId = j.metadata.id;
+    localStorage.setItem("p1040_bin", binId);
+    setSyncing("saved", "Storage created!");
+    // Show the bin ID prominently so Eric can lock it in
+    alert("Storage ready! Your Bin ID is: " + binId + " -- copy this and share it so it can be locked in permanently.");
+    setInterval(bgRefresh, 60000);
+  } catch(e) {
+    setSyncing("error", "Setup failed: " + e.message);
+    toast("⚠ Could not create storage bin: " + e.message);
+  }
 }
 
 // ── LOAD / SAVE ──────────────────────────────────
+function activeBin() {
+  return JSONBIN_BIN !== "ENTER_BIN_ID_HERE" ? JSONBIN_BIN : (localStorage.getItem("p1040_bin") || "");
+}
+function jsonbinHeaders(write) {
+  const h = {"X-Master-Key": JSONBIN_KEY, "Content-Type": "application/json"};
+  if (!write) h["X-Bin-Meta"] = "false";
+  return h;
+}
+
 async function load() {
-  // Always show data immediately - never hang on loading screen
   data = [...SEED];
   render();
   setSyncing("saving","Syncing…");
-  // 10-second timeout so a dead network fails fast
   const ctrl = new AbortController();
   const tid = setTimeout(function(){ ctrl.abort(); }, 10000);
   try {
-    const r = await fetch(API, {headers:{Accept:"application/json"}, signal:ctrl.signal});
+    const r = await fetch(READ_API(), {headers: jsonbinHeaders(false), signal: ctrl.signal});
     clearTimeout(tid);
     if (!r.ok) throw Error(r.status);
     const j = await r.json();
-    if (j.students) { data = j.students; render(); }
+    if (j.record && j.record.students) { data = j.record.students; render(); }
     synced = new Date();
     setSyncing("saved","Synced " + ago(synced));
   } catch(e) {
@@ -285,13 +388,12 @@ async function load() {
 
 async function bgRefresh() {
   try {
-    const r = await fetch(API, {headers:{Accept:"application/json"}});
+    const r = await fetch(READ_API(), {headers: jsonbinHeaders(false)});
     if (!r.ok) return;
     const j = await r.json();
-    data = j.students || data;
+    if (j.record && j.record.students) { data = j.record.students; render(); }
     synced = new Date();
     setSyncing("saved","Synced " + ago(synced));
-    render();
   } catch(e){}
 }
 
@@ -300,8 +402,11 @@ async function refreshData() { setSyncing("saving","Refreshing…"); await load(
 async function push(note) {
   setSyncing("saving","Saving…");
   try {
-    const r = await fetch(API, {method:"PUT", headers:{"Content-Type":"application/json",Accept:"application/json"},
-      body:JSON.stringify({students:data, by:me||"?", at:new Date().toISOString(), note:note||""})});
+    const r = await fetch(WRITE_API(), {
+      method: "PUT",
+      headers: jsonbinHeaders(true),
+      body: JSON.stringify({students: data, by: me||"?", at: new Date().toISOString(), note: note||""})
+    });
     if (!r.ok) throw Error(r.status);
     synced = new Date();
     setSyncing("saved","Saved by " + (me||"you"));
@@ -436,6 +541,33 @@ function showUserOverlay() { document.getElementById("user-overlay").classList.r
 function setUser(n) { me=n; localStorage.setItem("p1040_me",n); document.getElementById("user-overlay").classList.add("hidden"); updateChip(n); load(); }
 function changeUser() { showUserOverlay(); }
 function updateChip(n) { document.getElementById("uname").textContent=n; document.getElementById("uav").textContent=n[0]; }
+
+// ── SETUP ────────────────────────────────────────
+function copyData() {
+  const pay = JSON.stringify({students:SEED,by:"setup",at:new Date().toISOString(),version:1});
+  navigator.clipboard.writeText(pay).then(()=>toast("✓ Copied — now paste into JSONblob.com")).catch(()=>{
+    const ta=document.createElement("textarea");ta.value=pay;document.body.appendChild(ta);ta.select();document.execCommand("copy");document.body.removeChild(ta);toast("✓ Copied!");
+  });
+}
+
+function dlConfigured() {
+  const bid = document.getElementById("bid").value.trim();
+  if (!bid||bid.length<5) { document.getElementById("se").style.display="block"; return; }
+  const src = document.documentElement.outerHTML;
+  const out = src.replace("ENTER_BLOB_ID_HERE", bid);
+  const b = new Blob([out],{type:"text/html"});
+  const url = URL.createObjectURL(b);
+  // Approach 1: programmatic click (works in most browsers)
+  const a = document.createElement("a");
+  a.href = url; a.download = "PSYC1040_Workshop_Manager.html";
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(()=>URL.revokeObjectURL(url), 2000);
+  // Approach 2: show fallback link in case approach 1 is blocked
+  const fb = document.getElementById("dl-fallback");
+  fb.innerHTML = ['If it did not download, <a href=', url, ' download=PSYC1040_Workshop_Manager.html>click here</a>'].join('');
+  fb.style.display = "block";
+  toast("✓ Configured file ready — check your Downloads folder!");
+}
 
 // ── HELPERS ──────────────────────────────────────
 function setSyncing(cls,txt){ const el=document.getElementById("sync"); el.className="sync "+cls; document.getElementById("sync-txt").textContent=txt; }
