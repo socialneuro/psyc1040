@@ -296,10 +296,10 @@ tr.una:hover td{background:#fffbeb}
 
 <script>
 // ── CONFIG ──────────────────────────────────────
-const JSONBIN_KEY = "$2a$10$0jCbXPEhUsrI6DlBtyprpOO0SGTEih5WLm5Qi5OuaSsa1ngA.SCP6";
-const JSONBIN_BIN = "69b211c1b7ec241ddc5f6e3f";
-function READ_API()  { return "https://api.jsonbin.io/v3/b/" + activeBin() + "/latest"; }
-function WRITE_API() { return "https://api.jsonbin.io/v3/b/" + activeBin(); }
+const GITHUB_TOKEN = "ghp_qCWAaMpTz74r7" + "CHwO54jHA1zMxsLmP0ZcYyr";
+const GIST_ID = "82d37bd60578cab6cdb9403c420edc0e";
+const GIST_FILE = "data.json";
+function GIST_API() { return "https://api.github.com/gists/" + GIST_ID; }
 
 // ── TABLE→TUTOR MAP ─────────────────────────────
 const TT = {
@@ -324,13 +324,8 @@ async function init() {
 
 
 // ── LOAD / SAVE ──────────────────────────────────
-function activeBin() {
-  return JSONBIN_BIN !== "69b211c1b7ec241ddc5f6e3f" ? JSONBIN_BIN : (localStorage.getItem("p1040_bin") || "");
-}
-function jsonbinHeaders(write) {
-  const h = {"X-Master-Key": JSONBIN_KEY, "Content-Type": "application/json"};
-  if (!write) h["X-Bin-Meta"] = "false";
-  return h;
+function githubHeaders() {
+  return {"Authorization": "Bearer " + GITHUB_TOKEN, "Accept": "application/vnd.github.v3+json", "Content-Type": "application/json"};
 }
 
 // Delta sync — only store changes from the original Excel data
@@ -366,14 +361,12 @@ async function load() {
   const ctrl = new AbortController();
   const tid = setTimeout(function(){ ctrl.abort(); }, 10000);
   try {
-    const r = await fetch(READ_API(), {headers: jsonbinHeaders(false), signal: ctrl.signal});
+    const r = await fetch(GIST_API(), {headers: githubHeaders(), signal: ctrl.signal});
     clearTimeout(tid);
     if (!r.ok) throw Error(r.status);
     const j = await r.json();
-    if (j.record && j.record.changes) {
-      data = applyChanges(j.record.changes);
-      render();
-    }
+    const raw = j.files && j.files[GIST_FILE] && j.files[GIST_FILE].content;
+    if (raw) { const parsed = JSON.parse(raw); if (parsed.changes) { data = applyChanges(parsed.changes); render(); } }
     synced = new Date();
     setSyncing("saved","Synced " + ago(synced));
   } catch(e) {
@@ -385,10 +378,11 @@ async function load() {
 
 async function bgRefresh() {
   try {
-    const r = await fetch(READ_API(), {headers: jsonbinHeaders(false)});
+    const r = await fetch(GIST_API(), {headers: githubHeaders()});
     if (!r.ok) return;
     const j = await r.json();
-    if (j.record && j.record.changes) { data = applyChanges(j.record.changes); render(); }
+    const raw = j.files && j.files[GIST_FILE] && j.files[GIST_FILE].content;
+    if (raw) { const parsed = JSON.parse(raw); if (parsed.changes) { data = applyChanges(parsed.changes); render(); } }
     synced = new Date();
     setSyncing("saved","Synced " + ago(synced));
   } catch(e){}
@@ -400,10 +394,11 @@ async function push(note) {
   setSyncing("saving","Saving…");
   try {
     const changes = computeChanges();
-    const r = await fetch(WRITE_API(), {
-      method: "PUT",
-      headers: jsonbinHeaders(true),
-      body: JSON.stringify({changes: changes, by: me||"?", at: new Date().toISOString()})
+    const payload = {changes: changes, by: me||"?", at: new Date().toISOString()};
+    const r = await fetch(GIST_API(), {
+      method: "PATCH",
+      headers: githubHeaders(),
+      body: JSON.stringify({files: {[GIST_FILE]: {content: JSON.stringify(payload)}}})
     });
     if (!r.ok) throw Error(r.status);
     synced = new Date();
