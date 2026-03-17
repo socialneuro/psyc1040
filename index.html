@@ -93,13 +93,10 @@ header{background:var(--surface);border-bottom:1px solid var(--border);padding:0
 .rc{font-size:12px;color:var(--muted);align-self:center;white-space:nowrap;margin-left:auto}
 
 /* TABLE */
-#tw{padding:0 24px 32px}
-.tw-scroll{overflow-x:auto}
-table{width:100%;border-collapse:separate;border-spacing:0;background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:var(--sh)}
-th:first-child{border-top-left-radius:9px}th:last-child{border-top-right-radius:9px}
-tr:last-child td:first-child{border-bottom-left-radius:9px}tr:last-child td:last-child{border-bottom-right-radius:9px}
+#tw{padding:0 24px 32px;overflow-x:auto}
+table{width:100%;border-collapse:separate;border-spacing:0;background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;box-shadow:var(--sh)}
 thead{background:#f8f9fc}
-th{padding:11px 14px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);border-bottom:1px solid var(--border);white-space:nowrap;cursor:pointer;user-select:none;background:#f8f9fc}
+th{padding:11px 14px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);border-bottom:1px solid var(--border);white-space:nowrap;cursor:pointer;user-select:none;position:sticky;top:60px;z-index:10;background:#f8f9fc}
 th:hover{color:var(--accent)}
 th.sorted{color:var(--accent)}
 td{padding:10px 14px;border-bottom:1px solid #f0f2f5;vertical-align:middle}
@@ -136,6 +133,33 @@ tr.una:hover td{background:#fffbeb}
 @keyframes spin{to{transform:rotate(360deg)}}
 #toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:#1e1e2e;color:#cdd6f4;padding:10px 20px;border-radius:8px;font-size:13px;font-weight:500;transition:transform .3s ease;z-index:2000;box-shadow:0 4px 20px rgba(0,0,0,.3);white-space:nowrap}
 #toast.show{transform:translateX(-50%) translateY(0)}
+
+/* SCORES MODAL */
+#score-modal{position:fixed;inset:0;background:rgba(15,20,30,.78);z-index:1001;display:flex;align-items:center;justify-content:center;padding:24px}
+#score-modal.hidden{display:none}
+.smc{background:var(--surface);border-radius:16px;padding:32px;max-width:480px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.28);max-height:90vh;overflow-y:auto}
+.smc-hd{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px}
+.smc-hd h2{font-size:18px;font-weight:700}
+.smc-hd p{font-size:12px;color:var(--muted);margin-top:2px}
+.smc-close{background:none;border:none;cursor:pointer;padding:4px 8px;color:var(--muted);font-size:18px;line-height:1;border-radius:6px;font-family:"Inter",sans-serif}
+.smc-close:hover{background:var(--bg);color:var(--text)}
+.wk-grid{display:grid;gap:5px}
+.wk-row{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:8px;background:var(--bg)}
+.wk-lbl{font-size:12px;font-weight:600;width:58px;flex-shrink:0;color:var(--muted)}
+.wk-btns{display:flex;gap:5px;flex:1}
+.sv-btn{flex:1;padding:5px 0;border-radius:6px;border:1.5px solid var(--border);background:var(--surface);font-size:13px;font-weight:700;cursor:pointer;transition:all .12s;font-family:"Inter",sans-serif;color:var(--muted)}
+.sv-btn:hover{border-color:var(--accent);color:var(--accent);background:var(--acl)}
+.sv-btn.sv5{background:#dcfce7;border-color:#16a34a;color:#15803d}
+.sv-btn.sv2{background:#fef9c3;border-color:#ca8a04;color:#92400e}
+.sv-btn.sv0{background:#fee2e2;border-color:#dc2626;color:#b91c1c}
+.sv-btn.svn{background:#f1f5f9;border-color:#cbd5e1;color:#64748b}
+.smc-foot{margin-top:16px;display:flex;justify-content:space-between;align-items:center;padding-top:16px;border-top:1px solid var(--border)}
+.score-sum{font-size:12px;color:var(--muted)}
+.score-sum strong{color:var(--text);font-size:15px}
+.csc{width:130px}
+.sc-chip{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:12px;font-size:12px;font-weight:600;background:var(--bg);border:1px solid var(--border);cursor:pointer;white-space:nowrap;transition:all .15s;color:var(--muted)}
+.sc-chip:hover{border-color:var(--accent);background:var(--acl);color:var(--accent)}
+.sc-chip.hsc{background:#eff6ff;border-color:#bfdbfe;color:#1d4ed8}
 </style>
 </head>
 <body>
@@ -278,7 +302,6 @@ tr.una:hover td{background:#fffbeb}
 
 <!-- TABLE -->
 <div id="tw">
-<div class="tw-scroll">
   <div id="loading"><div class="spin"></div>Loading student data&hellip;</div>
   <table id="tbl" style="display:none">
     <thead><tr>
@@ -287,6 +310,7 @@ tr.una:hover td{background:#fffbeb}
       <th onclick="srt('workshop')" data-c="workshop">Workshop <span id="arr-workshop">&#8597;</span></th>
       <th onclick="srt('table')" data-c="table">Table <span id="arr-table">&#8597;</span></th>
       <th onclick="srt('tutor')" data-c="tutor">Tutor <span id="arr-tutor">&#8597;</span></th>
+      <th onclick="srt('_score')" data-c="_score">Scores <span id="arr-_score">&#8597;</span></th>
     </tr></thead>
     <tbody id="tb"></tbody>
   </table>
@@ -296,13 +320,30 @@ tr.una:hover td{background:#fffbeb}
     <p>Try adjusting your search or clearing a filter.</p>
   </div>
 </div>
+<!-- SCORES MODAL -->
+<div id="score-modal" class="hidden">
+<div class="smc">
+  <div class="smc-hd">
+    <div>
+      <h2 id="sm-name">Student</h2>
+      <p id="sm-sub"></p>
+    </div>
+    <button class="smc-close" onclick="closeScores()">✕</button>
+  </div>
+  <div class="wk-grid" id="wk-grid"></div>
+  <div class="smc-foot">
+    <div class="score-sum">Total: <strong id="sm-tot">—</strong> pts &nbsp;·&nbsp; <span id="sm-cnt">0</span>/13 weeks entered</div>
+    <button class="btn btn-p btn-sm" onclick="closeScores()">Done</button>
+  </div>
 </div>
+</div>
+
 <div id="toast"></div>
 
 <script>
 // ── CONFIG ──────────────────────────────────────
-const GITHUB_TOKEN = "ghp_qCWAaMpTz74r7" + "CHwO54jHA1zMxsLmP0ZcYyr";
-const GIST_ID = "82d37bd60578cab6cdb9403c420edc0e";
+const GITHUB_TOKEN = "ENTER_TOKEN_HERE";
+const GIST_ID = "ENTER_GIST_ID_HERE";
 const GIST_FILE = "data.json";
 function GIST_API() { return "https://api.github.com/gists/" + GIST_ID; }
 
@@ -344,9 +385,10 @@ function computeChanges() {
   const orig = seedMap();
   return data.filter(function(s){
     const o = orig[s.id];
-    return !o || o.workshop !== s.workshop || o.table !== s.table;
+    const hasScores = s.scores && Object.keys(s.scores).length > 0;
+    return !o || o.workshop !== s.workshop || o.table !== s.table || hasScores;
   }).map(function(s){
-    return {id:s.id, workshop:s.workshop, table:s.table, tutor:s.tutor};
+    return {id:s.id, workshop:s.workshop, table:s.table, tutor:s.tutor, scores:s.scores||{}};
   });
 }
 
@@ -449,7 +491,12 @@ function go() {
   const ft = document.getElementById("f-tutor").value.toLowerCase();
   const fs = document.getElementById("f-st").value;
 
-  let rows = data.map((s,i) => Object.assign({},s,{_i:i}));
+  let rows = data.map((s,i) => {
+    const sc = s.scores || {};
+    const wks = Object.keys(sc).length;
+    const _score = wks > 0 ? Object.values(sc).reduce((a,b)=>a+b,0) : -1;
+    return Object.assign({},s,{_i:i,_score,_scorewks:wks});
+  });
   if (q)  rows = rows.filter(s => s.last.toLowerCase().includes(q)||s.first.toLowerCase().includes(q)||s.id.includes(q));
   if (fw) rows = rows.filter(s => s.workshop===fw);
   if (ft) rows = rows.filter(s => s.tutor.toLowerCase().includes(ft));
@@ -496,6 +543,7 @@ function go() {
       <td class="cws"><select class="cs" onchange="chgWS(${s._i},this.value)">${wso}</select></td>
       <td class="ctbl"><select class="cs" onchange="chgTbl(${s._i},this.value)">${tbo}</select></td>
       <td class="ctut tc2">${tuth}</td>
+      <td class="csc">${scoreChip(s._i,s)}</td>
     </tr>`;
   }).join("");
 }
@@ -525,7 +573,7 @@ function render() {
 // ── SORT ─────────────────────────────────────────
 function srt(c) {
   sa = sc===c ? !sa : true; sc = c;
-  ["id","last","workshop","table","tutor"].forEach(x => {
+  ["id","last","workshop","table","tutor","_score"].forEach(x => {
     const el = document.getElementById("arr-"+x);
     if (el) el.textContent = x===c ? (sa?"↑":"↓") : "↕";
     const th = document.querySelector(`th[data-c="${x}"]`);
@@ -566,6 +614,78 @@ function dlConfigured() {
   fb.style.display = "block";
   toast("✓ Configured file ready — check your Downloads folder!");
 }
+
+// ── SCORES ───────────────────────────────────────
+let scoreIdx = null;
+
+function openScores(i) {
+  scoreIdx = i;
+  const s = data[i];
+  document.getElementById("sm-name").textContent = s.last + ", " + s.first;
+  document.getElementById("sm-sub").textContent = (s.workshop||"No workshop") + (s.tutor ? " · " + s.tutor : "");
+  renderScoreGrid();
+  document.getElementById("score-modal").classList.remove("hidden");
+}
+
+function closeScores() {
+  document.getElementById("score-modal").classList.add("hidden");
+  scoreIdx = null;
+}
+
+function renderScoreGrid() {
+  const s = data[scoreIdx];
+  const sc = s.scores || {};
+  let html = "";
+  for (let w = 1; w <= 13; w++) {
+    const v = sc[w] !== undefined ? sc[w] : null;
+    html += `<div class="wk-row">
+      <div class="wk-lbl">Week ${w}</div>
+      <div class="wk-btns">
+        <button class="sv-btn${v===5?" sv5":""}" onclick="setScore(${w},5)">5</button>
+        <button class="sv-btn${v===2?" sv2":""}" onclick="setScore(${w},2)">2</button>
+        <button class="sv-btn${v===0?" sv0":""}" onclick="setScore(${w},0)">0</button>
+        <button class="sv-btn${v===null?" svn":""}" onclick="setScore(${w},null)" title="Clear">—</button>
+      </div>
+    </div>`;
+  }
+  document.getElementById("wk-grid").innerHTML = html;
+  updateScoreSummary();
+}
+
+function setScore(week, val) {
+  const s = data[scoreIdx];
+  if (!s.scores) s.scores = {};
+  if (val === null) {
+    delete s.scores[week];
+  } else {
+    s.scores[week] = val;
+  }
+  renderScoreGrid();
+  go();
+  defer("scores " + s.last + " wk" + week);
+}
+
+function updateScoreSummary() {
+  const s = data[scoreIdx];
+  const sc = s.scores || {};
+  const wks = Object.keys(sc).length;
+  const total = wks > 0 ? Object.values(sc).reduce((a,b)=>a+b,0) : null;
+  document.getElementById("sm-tot").textContent = total !== null ? total : "—";
+  document.getElementById("sm-cnt").textContent = wks;
+}
+
+function scoreChip(i, s) {
+  const sc = s.scores || {};
+  const wks = Object.keys(sc).length;
+  if (wks === 0) {
+    return `<span class="sc-chip" onclick="openScores(${i})">&#128202; Scores</span>`;
+  }
+  const total = Object.values(sc).reduce((a,b)=>a+b,0);
+  return `<span class="sc-chip hsc" onclick="openScores(${i})">&#128202; ${total}pts &middot; ${wks}/13</span>`;
+}
+
+// Close scores modal on Escape
+document.addEventListener("keydown", function(e){ if(e.key==="Escape" && scoreIdx!==null) closeScores(); });
 
 // ── HELPERS ──────────────────────────────────────
 function setSyncing(cls,txt){ const el=document.getElementById("sync"); el.className="sync "+cls; document.getElementById("sync-txt").textContent=txt; }
