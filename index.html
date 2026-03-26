@@ -298,6 +298,7 @@ tr.una:hover td{background:#fffbeb}
     <option value="u">Unassigned only</option>
   </select>
   <span class="rc" id="rc"></span>
+  <button class="btn btn-s btn-sm" onclick="exportCSV()" title="Download all student data as a CSV file">&#11015;&nbsp;Export CSV</button>
 </div>
 
 <!-- TABLE -->
@@ -687,6 +688,32 @@ function scoreChip(i, s) {
 
 // Close scores modal on Escape
 document.addEventListener("keydown", function(e){ if(e.key==="Escape" && scoreIdx!==null) closeScores(); });
+
+// ── EXPORT ───────────────────────────────────────
+function exportCSV() {
+  const weeks = Array.from({length:13},(_,i)=>i+1);
+  const header = ["Student ID","Last Name","First Name","Workshop","Table","Tutor",
+    ...weeks.map(w=>"Week "+w),"Total","Weeks Entered"];
+  const rows = data.map(function(s){
+    const sc = s.scores || {};
+    const entered = Object.keys(sc).length;
+    const total = entered > 0 ? Object.values(sc).reduce((a,b)=>a+b,0) : "";
+    return [
+      s.id, s.last, s.first, s.workshop||"", s.table||"", s.tutor||"",
+      ...weeks.map(w => sc[w]!==undefined ? sc[w] : ""),
+      total, entered||""
+    ];
+  });
+  const esc = v => { const s=String(v); return s.includes(",")||s.includes('"')||s.includes("\n") ? '"'+s.replace(/"/g,'""')+'"' : s; };
+  const csv = [header, ...rows].map(r=>r.map(esc).join(",")).join("\r\n");
+  const blob = new Blob([csv], {type:"text/csv"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href=url; a.download="PSYC1040_scores_"+new Date().toISOString().slice(0,10)+".csv";
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(()=>URL.revokeObjectURL(url),2000);
+  toast("✓ CSV downloaded");
+}
 
 // ── TABLE HEIGHT ─────────────────────────────────
 function updateTableHeight() {
